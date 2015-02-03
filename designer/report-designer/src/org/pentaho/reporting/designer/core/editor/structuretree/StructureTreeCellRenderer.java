@@ -230,7 +230,11 @@ public class StructureTreeCellRenderer extends DefaultTreeCellRenderer
     else if (value instanceof ParameterDefinitionEntry)
     {
       final ParameterDefinitionEntry params = (ParameterDefinitionEntry) value;
-      setText(params.getName());
+      if ( !StringUtils.isEmpty( params.getName() ) ) {
+        setText( params.getName() );
+      } else {
+        setText( Messages.getString( "StructureTreeCellRenderer.UnnamedParameterPlaceholder" ) );
+      }
     }
     else if (value instanceof DataFactory)
     {
