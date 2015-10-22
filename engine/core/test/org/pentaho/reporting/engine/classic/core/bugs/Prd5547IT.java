@@ -21,6 +21,8 @@ import static javax.xml.xpath.XPathConstants.NODESET;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URL;
@@ -55,77 +57,144 @@ public class Prd5547IT {
 
   @Test
   public void testTableLayout_singleHeader() throws Exception {
-    final URL url = getClass().getResource( "Prd5547IT_singleHdr.prpt" );
+    final URL url = getClass().getResource( "Prd-5547-tableLayout-singleHdr.prpt" );
 
     String xml = runReportToXmlPage( url );
 
     final String[] actualTexts = extractTexts( xml );
 
     String[] expectedTexts = new String[] {//
-        "HEADER_200_single",//
-          "ROWNUM-1_H190_single_header",//
-          "ROWNUM-2_H190_single_header",//
+        "HDR_page1_h200_tableLayout_singleHdr",//
+          "Id1-RowNum1_page1_tableLayout_singleHdr",//
+          "Id2-RowNum2_page1_tableLayout_singleHdr",//
           "1",//
-          "ROWNUM-3_H190_single_header",//
-          "ROWNUM-4_H190_single_header",//
-          "ROWNUM-5_H190_single_header",//
+          "Id3-RowNum3_page2_tableLayout_singleHdr",//
+          "Id4-RowNum4_page2_tableLayout_singleHdr",//
+          "Id5-RowNum5_page2_tableLayout_singleHdr",//
           "2",//
-          "ROWNUM-6_H190_single_header",//
+          "Id6-RowNum6_page3_tableLayout_singleHdr",//
+          "Id7-RowNum7_page3_tableLayout_singleHdr",//
+          "Id8-RowNum8_page3_tableLayout_singleHdr",//
           "3"//
         };
-//    actualTexts before fix
-//    HEADER_200_single
-//    ROWNUM-1_H190_single_header
-//    ROWNUM-2_H190_single_header
-//    1
-//    HEADER_200_single
-//    ROWNUM-3_H190_single_header
-//    ROWNUM-4_H190_single_header
-//    2
-//    HEADER_200_single
-//    ROWNUM-6_H190_single_header
-//    3
-//    HEADER_200_single
-//    4
+    // actualTexts before fix
+    // HDR_page1_h200_tableLayout_singleHdr
+    // Id1-RowNum1_page1_tableLayout_singleHdr
+    // Id2-RowNum2_page1_tableLayout_singleHdr
+    // 1
+    // HDR_page1_h200_tableLayout_singleHdr
+    // Id3-RowNum3_page1_tableLayout_singleHdr
+    // Id4-RowNum4_page2_tableLayout_singleHdr
+    // 2
+    // HDR_page1_h200_tableLayout_singleHdr
+    // Id6-RowNum6_page3_tableLayout_singleHdr
+    // 3
+    // HDR_page1_h200_tableLayout_singleHdr
+    // 4
     Assert.assertArrayEquals( expectedTexts, actualTexts );
   }
 
   @Test
   public void testTableLayout_repeatHeader() throws Exception {
-    final URL url = getClass().getResource( "Prd5547IT_repeatHdr.prpt" );
+    final URL url = getClass().getResource( "Prd-5547-tableLayout-repeatHdr.prpt" );
 
     String xml = runReportToXmlPage( url );
 
     final String[] actualTexts = extractTexts( xml );
 
     String[] expectedTexts = new String[] {//
-        "HEADER_200_repeat",//
-          "ROWNUM-1_H190_repeat_header",//
-          "ROWNUM-2_H190_repeat_header",//
+        "HDR_page1_h200_tableLayout_repeatHdr",//
+          "Id1-RowNum1_page1_tableLayout_repeatHdr",//
+          "Id2-RowNum2_page1_tableLayout_repeatHdr",//
           "1",//
-          "HEADER_200_repeat",//
-          "ROWNUM-3_H190_repeat_header",//
-          "ROWNUM-4_H190_repeat_header",//
+          "HDR_page2_h200_tableLayout_repeatHdr",//
+          "Id3-RowNum3_page2_tableLayout_repeatHdr",//
+          "Id4-RowNum4_page2_tableLayout_repeatHdr",//
           "2",//
-          "HEADER_200_repeat",//
-          "ROWNUM-5_H190_repeat_header",//
-          "ROWNUM-6_H190_repeat_header",//
+          "HDR_page3_h200_tableLayout_repeatHdr",//
+          "Id5-RowNum5_page3_tableLayout_repeatHdr",//
+          "Id6-RowNum6_page3_tableLayout_repeatHdr",//
+          "3",//
+          "HDR_page4_h200_tableLayout_repeatHdr",//
+          "Id7-RowNum7_page4_tableLayout_repeatHdr",//
+          "Id8-RowNum8_page4_tableLayout_repeatHdr",//
+          "4"//
+        };
+    // actualTexts before fix
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // Id1-RowNum1_page1_tableLayout_repeatHdr
+    // Id2-RowNum2_page1_tableLayout_repeatHdr
+    // 1
+    // HDR_page2_h200_tableLayout_repeatHdr
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // Id3-RowNum3_page1_tableLayout_repeatHdr
+    // 2
+    // HDR_page3_h200_tableLayout_repeatHdr
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // 3
+    // HDR_page4_h200_tableLayout_repeatHdr
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // 4
+    // HDR_page5_h200_tableLayout_repeatHdr
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // 5
+    // HDR_page6_h200_tableLayout_repeatHdr
+    // HDR_page1_h200_tableLayout_repeatHdr
+    // 6
+    Assert.assertArrayEquals( expectedTexts, actualTexts );
+  }
+
+  @Test
+  public void testSimpleLayout_singleHeader() throws Exception {
+    final URL url = getClass().getResource( "Prd-5547-simpleLayout-singleHdr.prpt" );
+
+    String xml = runReportToXmlPage( url );
+
+    final String[] actualTexts = extractTexts( xml );
+
+    String[] expectedTexts = new String[] {//
+        "HDR_page1_h200_simpleLayout_singleHdr",//
+          "Id1-RowNum1_page1_simpleLayout_singleHdr",//
+          "Id2-RowNum2_page1_simpleLayout_singleHdr",//
+          "1",//
+          "Id3-RowNum3_page2_simpleLayout_singleHdr",//
+          "Id4-RowNum4_page2_simpleLayout_singleHdr",//
+          "Id5-RowNum5_page2_simpleLayout_singleHdr",//
+          "2",//
+          "Id6-RowNum6_page3_simpleLayout_singleHdr",//
+          "Id7-RowNum7_page3_simpleLayout_singleHdr",//
+          "Id8-RowNum8_page3_simpleLayout_singleHdr",//
           "3"//
         };
-//    actualTexts before fix
-//    HEADER_200_repeat
-//    ROWNUM-1_H190_repeate_header
-//    ROWNUM-2_H190_repeate_header
-//    1
-//    HEADER_200_repeat
-//    ROWNUM-3_H190_repeate_header
-//    ROWNUM-4_H190_repeate_header
-//    2
-//    HEADER_200_repeat
-//    ROWNUM-6_H190_repeate_header
-//    3
-//    HEADER_200_repeat
-//    4
+    Assert.assertArrayEquals( expectedTexts, actualTexts );
+  }
+
+  @Test
+  public void testSimpleLayout_repeatHeader() throws Exception {
+    final URL url = getClass().getResource( "Prd-5547-simpleLayout-repeatHdr.prpt" );
+
+    String xml = runReportToXmlPage( url );
+
+    final String[] actualTexts = extractTexts( xml );
+
+    String[] expectedTexts = new String[] {//
+        "HDR_page1_h200_simpleLayout_repeatHdr",//
+          "Id1-RowNum1_page1_simpleLayout_repeatHdr",//
+          "Id2-RowNum2_page1_simpleLayout_repeatHdr",//
+          "1",//
+          "HDR_page2_h200_simpleLayout_repeatHdr",//
+          "Id3-RowNum3_page2_simpleLayout_repeatHdr",//
+          "Id4-RowNum4_page2_simpleLayout_repeatHdr",//
+          "2",//
+          "HDR_page3_h200_simpleLayout_repeatHdr",//
+          "Id5-RowNum5_page3_simpleLayout_repeatHdr",//
+          "Id6-RowNum6_page3_simpleLayout_repeatHdr",//
+          "3",//
+          "HDR_page4_h200_simpleLayout_repeatHdr",//
+          "Id7-RowNum7_page4_simpleLayout_repeatHdr",//
+          "Id8-RowNum8_page4_simpleLayout_repeatHdr",//
+          "4"//
+        };
 
     Assert.assertArrayEquals( expectedTexts, actualTexts );
   }
@@ -147,10 +216,10 @@ public class Prd5547IT {
 
     String xml = org.apache.commons.io.IOUtils.toString( xmlOutputStream.toByteArray(), "UTF-8" );
 
-    // {// TODO: for debug only
-    // final File outFile = File.createTempFile( "reportOut-", "", new File( "test-output\\" ) );
-    // copyToFile( xmlOutputStream.toByteArray(), outFile );
-    // }
+    {// TODO: for debug only
+      final File outFile = File.createTempFile( "reportOut-", "", new File( "test-output\\" ) );
+      copyToFile( xmlOutputStream.toByteArray(), outFile );
+    }
     return xml;
   }
 
@@ -163,23 +232,27 @@ public class Prd5547IT {
     final String[] texts = new String[cnt];
     for ( int i = 0, n = cnt; i < n; i++ ) {
       texts[i] = r.item( i ).getTextContent();
-      System.out.println( i + ": " + texts[i] );
+      System.out.println( "\"" + texts[i] + "\",//" );
+    }
+    for ( int i = 0, n = cnt; i < n; i++ ) {
+      texts[i] = r.item( i ).getTextContent();
+      System.out.println( "// " + texts[i] );
     }
     return texts;
   }
 
-//  // TODO: for debug only
-//  private void copyToFile( byte[] bytes, final File outFile ) throws IOException {
-//    FileOutputStream out = null;
-//    try {
-//      System.out.println( outFile.getAbsolutePath() );
-//      out = new FileOutputStream( outFile );
-//      out.write( bytes );
-//    } catch ( Exception e ) {
-//      if ( out != null ) {
-//        out.close();
-//      }
-//    }
-//  }
+  // TODO: for debug only
+  private void copyToFile( byte[] bytes, final File outFile ) throws IOException {
+    FileOutputStream out = null;
+    try {
+      System.out.println( outFile.getAbsolutePath() );
+      out = new FileOutputStream( outFile );
+      out.write( bytes );
+    } catch ( Exception e ) {
+      if ( out != null ) {
+        out.close();
+      }
+    }
+  }
 
 }
