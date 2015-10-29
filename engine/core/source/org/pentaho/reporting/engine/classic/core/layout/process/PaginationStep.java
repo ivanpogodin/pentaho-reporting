@@ -319,8 +319,14 @@ public final class PaginationStep extends IterateVisualProcessStep {
 
           paginationTableState = new PaginationTableState( paginationTableState );
           paginationTableState.suspendVisualStateCollection( true );
-
-          startTableHeaderSection( box, sectionRenderBox );
+          //remove it from every page except page 1
+//          if (paginationTableState.getPageOffset() > 0) {
+//            if (box.getParent() != null) {
+//              box.getParent().remove( box );
+//            }
+//          }
+          //startTableHeaderSection( box, sectionRenderBox );
+          
           return false;
         }
         case FOOTER: {
