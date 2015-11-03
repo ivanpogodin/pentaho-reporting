@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process;
 
+import junit.framework.Assert;
+
 import org.pentaho.reporting.engine.classic.core.layout.model.BlockRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.CanvasRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.InlineRenderBox;
@@ -173,6 +175,9 @@ public abstract class IterateStructuralProcessStep {
   }
 
   protected boolean startTableBox( final TableRenderBox box ) {
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //TODO table items should be cleaned !!!!!!!!!!
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!
     return true;
   }
 
@@ -195,8 +200,11 @@ public abstract class IterateStructuralProcessStep {
   protected final void processBoxChilds( final RenderBox box ) {
     RenderNode node = box.getFirstChild();
     while ( node != null ) {
+      RenderNode nextNode0 = node.getNext();
       startProcessing( node );
-      node = node.getNext();
+      RenderNode nextNode1 = node.getNext();
+      Assert.assertEquals( "Next node changed",  nextNode0, nextNode1);
+      node = nextNode0;
     }
   }
 
