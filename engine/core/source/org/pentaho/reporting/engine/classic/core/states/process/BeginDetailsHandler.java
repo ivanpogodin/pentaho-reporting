@@ -42,6 +42,7 @@ public class BeginDetailsHandler implements AdvanceHandler {
   }
 
   public ProcessState advance( final ProcessState state ) throws ReportProcessingException {
+    System.out.println(">>>> advance");
     final ProcessState next = state.deriveForAdvance();
     // if there is no data in the report's data source, this now prints the No-Data-Band.
     next.fireReportEvent();

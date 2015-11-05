@@ -33,6 +33,7 @@ import org.pentaho.reporting.engine.classic.core.layout.build.RenderModelBuilder
 import org.pentaho.reporting.engine.classic.core.layout.build.ReportRenderModelBuilder;
 import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.layout.output.ContentProcessingException;
+import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.output.LayoutPagebreakHandler;
 import org.pentaho.reporting.engine.classic.core.layout.output.OutputProcessor;
 import org.pentaho.reporting.engine.classic.core.layout.output.OutputProcessorFeature;
@@ -149,7 +150,7 @@ public abstract class AbstractRenderer implements Renderer {
     return 0;
   }
 
-  protected RenderModelBuilder getRenderModelBuilder() {
+  public RenderModelBuilder getRenderModelBuilder() {
     return renderModelBuilder;
   }
 
@@ -382,25 +383,37 @@ public abstract class AbstractRenderer implements Renderer {
       }
 
       // These structural processors will skip old nodes. These beasts cannot be cached otherwise.
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before tableValidationStep.validate" );
       tableValidationStep.validate( pageBox ); // STRUCT
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before paragraphLineBreakStep.compute" );
       paragraphLineBreakStep.compute( pageBox ); // STRUCT
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before staticPropertiesStep.compute" );
       staticPropertiesStep.compute( pageBox ); // STRUCT
 
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before minorAxisLayoutStep.compute" );
       minorAxisLayoutStep.compute( pageBox ); // VISUAL
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before canvasMinorAxisLayoutStep.compute" );
       canvasMinorAxisLayoutStep.compute( pageBox ); // VISUAL
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before majorAxisLayoutStep.compute" );
       majorAxisLayoutStep.compute( pageBox ); // VISUAL
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before canvasMajorAxisLayoutStep.compute" );
       canvasMajorAxisLayoutStep.compute( pageBox ); // VISUAL
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before preparePagination" );
 
       if ( preparePagination( pageBox ) == false ) {
+        DebugReporter.DR.printNode( pageBox, ".   validatePages. LAYOUT_UNVALIDATABLE" );
         return LayoutResult.LAYOUT_UNVALIDATABLE;
       }
 
+      DebugReporter.DR.printNode( pageBox, ".   validatePages. before applyCachedValuesStep.compute" );
       applyCachedValuesStep.compute( pageBox ); // STRUCT
 
       if ( isPageFinished() ) {
+        DebugReporter.DR.printNode( pageBox, ".   validatePages. LAYOUT_PAGEBREAK" );
         lastValidateResult = LayoutResult.LAYOUT_PAGEBREAK;
         return LayoutResult.LAYOUT_PAGEBREAK;
       } else {
+        DebugReporter.DR.printNode( pageBox, ".   validatePages. LAYOUT_NO_PAGEBREAK" );
         lastValidateResult = LayoutResult.LAYOUT_NO_PAGEBREAK;
         return LayoutResult.LAYOUT_NO_PAGEBREAK;
       }

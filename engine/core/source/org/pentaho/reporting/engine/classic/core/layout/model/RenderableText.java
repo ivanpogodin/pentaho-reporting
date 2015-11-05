@@ -17,8 +17,11 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.model;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.pentaho.reporting.engine.classic.core.ReportAttributeMap;
 import org.pentaho.reporting.engine.classic.core.layout.model.context.NodeLayoutProperties;
+import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.text.ExtendedBaselineInfo;
 import org.pentaho.reporting.engine.classic.core.layout.text.Glyph;
 import org.pentaho.reporting.engine.classic.core.layout.text.GlyphList;
@@ -167,6 +170,10 @@ public final class RenderableText extends RenderNode implements SplittableRender
 
     setMaximumBoxWidth( wordMaxWidth );
     setMinimumChunkWidth( minimumChunkWidth );
+    
+    //DEBUG
+    String rawText = this.getRawText();
+    DR.printStackTrace(new Throwable(), "---TEXT " + this.getRawText());
   }
 
   public int getNodeType() {

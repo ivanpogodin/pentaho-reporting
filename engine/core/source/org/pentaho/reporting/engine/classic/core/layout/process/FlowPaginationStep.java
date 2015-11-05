@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.pentaho.reporting.engine.classic.core.layout.model.FlowPageBreakPositionList;
@@ -28,6 +30,7 @@ import org.pentaho.reporting.engine.classic.core.layout.model.ParagraphRenderBox
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderNode;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
+import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.BoxShifter;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.FlowPaginationTableState;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.InitialPaginationShiftState;
@@ -239,7 +242,7 @@ public final class FlowPaginationStep extends IterateVisualProcessStep {
 
           paginationTableState = new FlowPaginationTableState( paginationTableState );
           paginationTableState.suspendVisualStateCollection( true );
-
+          DR.printStackTrace( new Throwable(), "startTableLevelBox-Header" );;
           startTableHeaderSection( box, sectionRenderBox );
           return false;
         }
@@ -251,10 +254,12 @@ public final class FlowPaginationStep extends IterateVisualProcessStep {
 
           // shift the box and all children downwards. Suspend pagebreaks.
           final long contextShift = shiftState.getShiftForNextChild();
+          DR.printStackTrace( new Throwable(), "startTableLevelBox-Footer" );;
           BoxShifter.shiftBox( box, contextShift );
           return false;
         }
         case BODY:
+          DR.printStackTrace( new Throwable(), "startTableLevelBox-Body" );;
           return startBlockLevelBox( box );
         default:
           throw new IllegalArgumentException();

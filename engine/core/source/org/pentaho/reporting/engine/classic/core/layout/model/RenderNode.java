@@ -17,9 +17,13 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.model;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
 import org.pentaho.reporting.engine.classic.core.ReportAttributeMap;
 import org.pentaho.reporting.engine.classic.core.layout.model.context.NodeLayoutProperties;
+import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.metadata.ElementType;
 import org.pentaho.reporting.engine.classic.core.states.ReportStateKey;
 import org.pentaho.reporting.engine.classic.core.style.ElementStyleKeys;
@@ -203,11 +207,48 @@ public abstract class RenderNode implements Cloneable {
   }
 
   public void shift( final long amount ) {
-    this.y += amount;
+    setY(this.y + amount);
   }
 
   public void setY( final long y ) {
+    if (y != 0) {
+      String display = pogi.PogiUtil.display( this );
+      //if ( display.contains( "HDR_page" ) ) 
+      {
+        final String info = extractNodeInfo( display );
+        final String msg = this.getClass().getSimpleName() + ".      setY (" + this.y + ")(" + y + ")"+info;
+        DebugReporter.DR.printText( display, msg );
+        DebugReporter.DR.printStackTrace( new Throwable(),  msg, true );
+      }
+    }
     this.y = y;
+  }
+
+  private String extractNodeInfo( String display ) {
+    final String info;
+    final int eolnCnt;
+    {
+      int cnt = 0;
+      Matcher m = Pattern.compile( "[\\r\\n]+" ).matcher( display );
+      while (m.find()) cnt ++;
+      eolnCnt = cnt;
+    }
+    final int textCnt;
+    {
+      int cnt = 0;
+      Matcher m = Pattern.compile( "RenderableText" ).matcher( display );
+      while (m.find()) cnt ++;
+      textCnt = cnt;
+    }
+    final String text1;
+    {
+      String txt = "";
+      Matcher m = Pattern.compile( "RenderableText\\\"([-\\w]*)" ).matcher( display );
+      if (m.find()) txt = m.group(1);
+      text1 = txt;
+    }
+    info = "("+ eolnCnt + " lines)("+textCnt+" texts)"+text1;
+    return info;
   }
 
   protected final void updateCacheState( final CacheState state ) {
@@ -596,11 +637,21 @@ public abstract class RenderNode implements Cloneable {
    * @param cachedY the cached y position
    */
   public void setCachedY( final long cachedY ) {
+    if (cachedY != 0) {
+      String display = pogi.PogiUtil.display( this );
+      //if ( display.contains( "HDR_page" ) ) 
+      {
+        final String info = extractNodeInfo( display );
+        final String msg = this.getClass().getSimpleName() + ".      setCachedY (" + this.cachedY + ")(" + cachedY + ")"+ info;
+        DebugReporter.DR.printText( display, msg );
+        DebugReporter.DR.printStackTrace( new Throwable(),  msg, true );
+      }
+    }
     this.cachedY = cachedY;
   }
 
   public void shiftCached( final long amount ) {
-    this.cachedY += amount;
+    setCachedY(this.cachedY + amount);
   }
 
   public final long getCachedWidth() {

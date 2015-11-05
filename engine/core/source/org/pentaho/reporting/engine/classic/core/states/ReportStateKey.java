@@ -28,6 +28,8 @@ import org.pentaho.reporting.engine.classic.core.event.ReportEvent;
  * @author Thomas Morgner
  */
 public class ReportStateKey {
+  static int counter = 0;
+  final int i;
   private ReportStateKey parent;
   private int cursor;
   private int stateCode;
@@ -42,6 +44,8 @@ public class ReportStateKey {
   private boolean inlineSubReportState;
 
   public ReportStateKey() {
+    i = counter++;
+    System.out.println(">>>> createEmpty");
   }
 
   public ReportStateKey( final ReportStateKey parent,
@@ -52,6 +56,7 @@ public class ReportStateKey {
                          final int sequenceCounter,
                          final boolean restoreState,
                          final boolean inlineSubReportState ) {
+    i = counter++;
     this.parent = parent;
     this.cursor = cursor;
     this.stateCode = stateCode;
@@ -60,6 +65,7 @@ public class ReportStateKey {
     this.sequenceCounter = sequenceCounter;
     this.restoreState = restoreState;
     this.inlineSubReportState = inlineSubReportState;
+    System.out.println(">>>> create" + this);
   }
 
   /**

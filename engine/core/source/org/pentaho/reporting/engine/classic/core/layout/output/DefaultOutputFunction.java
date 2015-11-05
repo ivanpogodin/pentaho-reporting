@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.output;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.pentaho.reporting.engine.classic.core.Band;
@@ -31,6 +33,7 @@ import org.pentaho.reporting.engine.classic.core.PageFooter;
 import org.pentaho.reporting.engine.classic.core.PageHeader;
 import org.pentaho.reporting.engine.classic.core.RelationalGroup;
 import org.pentaho.reporting.engine.classic.core.ReportDefinition;
+import org.pentaho.reporting.engine.classic.core.ReportHeader;
 import org.pentaho.reporting.engine.classic.core.ReportProcessingException;
 import org.pentaho.reporting.engine.classic.core.Watermark;
 import org.pentaho.reporting.engine.classic.core.event.PageEventListener;
@@ -969,11 +972,20 @@ public class DefaultOutputFunction extends AbstractFunction
                                                  final boolean testRepeat ) {
     final StyleSheet resolverStyleSheet = b.getComputedStyle();
     if ( testSticky && resolverStyleSheet.getBooleanStyleProperty( BandStyleKeys.STICKY ) == false ) {
+      if ( b instanceof DetailsHeader ) {
+        DR.printStackTrace( new Throwable(), "...DOF.isGroupSectionPrintable-false-sticky" );
+      }
       return false;
     }
 
     if ( testRepeat && resolverStyleSheet.getBooleanStyleProperty( BandStyleKeys.REPEAT_HEADER ) == false ) {
+      if ( b instanceof DetailsHeader ) {
+        DR.printStackTrace( new Throwable(), "...DOF.isGroupSectionPrintable-false-repeat" );
+      }
       return false;
+    }
+    if ( b instanceof DetailsHeader ) {
+      DR.printStackTrace( new Throwable(), "...DOF.isGroupSectionPrintable-true("+testSticky+","+testRepeat+")"+b.getName() );
     }
     return true;
   }
@@ -1020,6 +1032,10 @@ public class DefaultOutputFunction extends AbstractFunction
     if ( currentEvent == null ) {
       throw new NullPointerException( "Event must not be null." );
     }
+    if (Boolean.FALSE) {
+      DR.printStackTrace( new Throwable(), "DOF.setCurrentEvent oldCE=" + this.currentEvent);
+      DR.printStackTrace( new Throwable(), "DOF.setCurrentEvent newCE=" + currentEvent, true);
+    }
     this.currentEvent = currentEvent;
     this.pagebreakHandler.setReportState( currentEvent.getState() );
     this.renderer.setStateKey( currentEvent.getState().getProcessKey() );
@@ -1029,6 +1045,7 @@ public class DefaultOutputFunction extends AbstractFunction
    * Clears the current event.
    */
   protected void clearCurrentEvent() {
+    if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "DOF.clearCurrentEvent oldCE=" + this.currentEvent);
     if ( currentEvent == null ) {
       throw new IllegalStateException( "ClearCurrentEvent called without Event set:" );
     }
@@ -1045,6 +1062,7 @@ public class DefaultOutputFunction extends AbstractFunction
    * @throws CloneNotSupportedException this should never happen.
    */
   public final Object clone() throws CloneNotSupportedException {
+    if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "DOF.clone oldCE=" + this.currentEvent);
     final DefaultOutputFunction sl = (DefaultOutputFunction) super.clone();
     sl.repeatingFooterValidator = repeatingFooterValidator.clone();
     sl.currentEvent = null;
@@ -1074,6 +1092,7 @@ public class DefaultOutputFunction extends AbstractFunction
    * @return the deep clone.
    */
   public OutputFunction deriveForStorage() {
+    if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "DOF.deriveForStorage oldCE=" + this.currentEvent);
     try {
       final DefaultOutputFunction sl = (DefaultOutputFunction) super.clone();
       sl.repeatingFooterValidator = repeatingFooterValidator.clone();
@@ -1106,6 +1125,7 @@ public class DefaultOutputFunction extends AbstractFunction
    * @return the deep clone.
    */
   public OutputFunction deriveForPagebreak() {
+    if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "DOF.deriveForPagebreak oldCE=" + this.currentEvent);
     try {
       final DefaultOutputFunction sl = (DefaultOutputFunction) super.clone();
       sl.repeatingFooterValidator = repeatingFooterValidator.clone();

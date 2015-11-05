@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process.util;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.pentaho.reporting.engine.classic.core.layout.model.LayoutNodeTypes;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderNode;
@@ -42,7 +44,11 @@ public final class BoxShifter {
 
     box.shift( amount );
     if ( ( box.getNodeType() & LayoutNodeTypes.MASK_BOX ) == LayoutNodeTypes.MASK_BOX ) {
+
+      if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "__shiftBox_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_before" );
+      if (Boolean.FALSE) DR.printNode( box, "__shiftBox_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_before", true );
       shiftBoxInternal( (RenderBox) box, amount );
+      if (Boolean.FALSE) DR.printNode( box, "__shiftBox_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_after", true );
     }
   }
 
@@ -53,7 +59,10 @@ public final class BoxShifter {
 
     box.shift( amount );
     if ( ( box.getNodeType() & LayoutNodeTypes.MASK_BOX ) == LayoutNodeTypes.MASK_BOX ) {
+      if (Boolean.FALSE) DR.printStackTrace( new Throwable(), "__shiftBox_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_before" );
+      if (Boolean.FALSE) DR.printNode( box, "__shiftBoxUnchecked_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_before", true );
       shiftBoxInternal( (RenderBox) box, amount );
+      if (Boolean.FALSE) DR.printNode( box, "__shiftBoxUnchecked_" + box.getClass().getSimpleName() + " [" + box.getName() + "] " + ( amount / 10000 ) + "_after", true );
     }
   }
 

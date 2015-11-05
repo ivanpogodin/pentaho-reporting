@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.modules.output.pageable.base;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
@@ -128,6 +130,7 @@ public class PageableRenderer extends AbstractRenderer {
   protected boolean performPagination( final LayoutPagebreakHandler layoutPagebreakHandler,
                                        final boolean performOutput )
     throws ContentProcessingException {
+    DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-begin" );;
     // next: perform pagination.
     final LogicalPageBox pageBox = getPageBox();
 
@@ -143,6 +146,7 @@ public class PageableRenderer extends AbstractRenderer {
     pageBox.setAllVerticalBreaks( pageBreak.getAllBreaks() );
 
     pageCount += 1;
+    DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-pageCount-"+pageCount );
 
     //      DebugLog.log("1: **** Start Printing Page: " + pageCount);
     debugPrint( pageBox );
@@ -168,6 +172,7 @@ public class PageableRenderer extends AbstractRenderer {
       } else {
         // DebugLog.log("Processing fast contents for Page " + pageCount + " Page-Offset: " + pageOffset + " -> " +
         // nextOffset);
+        DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-processContent-pageBox" );
         outputProcessor.processContent( pageBox );
       }
     } else {
@@ -186,6 +191,7 @@ public class PageableRenderer extends AbstractRenderer {
     //      Log.debug ("PageTime " + (currentPageAge - lastPageAge));
     final boolean repeat = pageBox.isOpen() || ( pageBox.getHeight() > nextOffset );
     if ( repeat ) {
+      DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-repeat" );;
       pageBox.setPageOffset( nextOffset );
       countBoxesStep.process( pageBox );
       cleanPaginatedBoxesStep.compute( pageBox );

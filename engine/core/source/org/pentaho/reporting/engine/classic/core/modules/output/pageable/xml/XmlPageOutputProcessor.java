@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.modules.output.pageable.xml;
 
+import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+
 import org.pentaho.reporting.engine.classic.core.InvalidReportStateException;
 import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.PageGrid;
@@ -96,6 +98,7 @@ public class XmlPageOutputProcessor extends AbstractPageableOutputProcessor {
                                       final int col,
                                       final PhysicalPageKey pageKey )
     throws ContentProcessingException {
+    DR.printStackTrace( new Throwable(), "XmlPageOP.processPhysicalPage" );
     try {
       if ( writer == null ) {
         writer = new XmlDocumentWriter( outputStream, metaData );
@@ -110,6 +113,7 @@ public class XmlPageOutputProcessor extends AbstractPageableOutputProcessor {
   protected void processLogicalPage( final LogicalPageKey key,
                                      final LogicalPageBox logicalPage )
     throws ContentProcessingException {
+    DR.printStackTrace( new Throwable(), "XmlPageOP.processLogicalPage" );
     try {
       if ( writer == null ) {
         writer = new XmlDocumentWriter( outputStream, metaData );
