@@ -141,11 +141,11 @@ public class CleanTableRowsPreparationStep extends IterateStructuralProcessStep 
   public static int computeSafeCut( final long pageOffset, final GenericObjectTable<Cell> cells,
                                     final int trueRowCount ) {
     int rowForPageOffset = findRowForPageOffset( pageOffset, cells, trueRowCount );
-    if ( rowForPageOffset == 0 ) {
+    if ( rowForPageOffset == -1 ) {
       // none of the rows can be cut, the whole table must be preserved.
       return 0;
     }
-    if ( rowForPageOffset == trueRowCount ) {
+    if ( rowForPageOffset == (trueRowCount-1) ) {
       // all the table content is before the page-offset, so we can remove all table elements.
       return trueRowCount;
     }
@@ -182,7 +182,7 @@ public class CleanTableRowsPreparationStep extends IterateStructuralProcessStep 
   private static int findRowForPageOffset( final long pageOffset,
                                            final GenericObjectTable<Cell> cells,
                                            final int trueRowCount ) {
-    int selectedRow = 0;
+    int selectedRow = -1;
     for ( int row = 0; row < trueRowCount; row += 1 ) {
       long pos = -1;
       for ( int col = 0; col < cells.getColumnCount(); col += 1 ) {

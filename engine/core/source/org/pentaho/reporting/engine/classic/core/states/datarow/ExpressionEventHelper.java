@@ -19,6 +19,7 @@ package org.pentaho.reporting.engine.classic.core.states.datarow;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.Assert;
 import org.pentaho.reporting.engine.classic.core.InvalidReportStateException;
 import org.pentaho.reporting.engine.classic.core.event.PageEventListener;
 import org.pentaho.reporting.engine.classic.core.event.ReportEvent;
@@ -98,12 +99,14 @@ public abstract class ExpressionEventHelper {
 
         final ExpressionRuntime oldRuntime = expression.getRuntime();
         expression.setRuntime( runtime );
+        boolean ok = false;
         try {
           if ( expression instanceof Function ) {
             final Function e = (Function) expression;
             e.itemsAdvanced( event );
           }
           evaluateSingleExpression( expression );
+          ok = true;
         } catch ( final InvalidReportStateException rse ) {
           throw rse;
         } catch ( final Exception ex ) {
@@ -113,9 +116,10 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire prepare event: " + ex );
           }
           evaluateToNull( expression );
+        } finally {
+          Assert.assertTrue("runtime is not restorable!!!", ok);
+          expression.setRuntime( oldRuntime ); 
         }
-
-        expression.setRuntime( oldRuntime );
       }
     }
   }
@@ -157,10 +161,10 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire prepare event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
         expression.setRuntime( oldRuntime );
-
+        }
       }
     }
   }
@@ -202,9 +206,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire prepare event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -246,9 +250,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire group-started event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -290,9 +294,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire group-finished event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -334,9 +338,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire group-finished event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -378,9 +382,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire report-started event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -422,9 +426,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire report-done event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -466,9 +470,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire report-finished event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -510,9 +514,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire report-initialized event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime );}
       }
     }
   }
@@ -554,9 +558,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire page-started event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -598,9 +602,9 @@ public abstract class ExpressionEventHelper {
             logger.error( "Failed to fire page-finished event: " + ex );
           }
           evaluateToNull( expression );
-        }
+        } finally {
 
-        expression.setRuntime( oldRuntime );
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }
@@ -626,8 +630,8 @@ public abstract class ExpressionEventHelper {
 
         final ExpressionRuntime oldRuntime = expression.getRuntime();
         expression.setRuntime( runtime );
-        evaluateSingleExpression( expression );
-        expression.setRuntime( oldRuntime );
+        try {evaluateSingleExpression( expression ); } finally {
+        expression.setRuntime( oldRuntime ); }
       }
     }
   }

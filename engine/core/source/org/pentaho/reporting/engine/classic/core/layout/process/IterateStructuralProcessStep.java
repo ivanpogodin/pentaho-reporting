@@ -48,7 +48,7 @@ public abstract class IterateStructuralProcessStep {
   protected final void startProcessing( final RenderNode node ) {
     final int nodeType = node.getNodeType();
     if ( nodeType == LayoutNodeTypes.TYPE_BOX_AUTOLAYOUT ) {
-      final RenderBox box = (RenderBox) node;
+      final RenderBox box = (RenderBox) node;//TODO DR.
       if ( startAutoBox( box ) ) {
         processBoxChilds( box );
       }
@@ -175,10 +175,8 @@ public abstract class IterateStructuralProcessStep {
   }
 
   protected boolean startTableBox( final TableRenderBox box ) {
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //TODO table items should be cleaned !!!!!!!!!!
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!
-    return true;
+    //return startBlockBox(box);
+    return true; //TODO table items should be cleaned !!!!!!!!!!
   }
 
   protected void finishTableBox( final TableRenderBox box ) {
@@ -203,7 +201,7 @@ public abstract class IterateStructuralProcessStep {
       RenderNode nextNode0 = node.getNext();
       startProcessing( node );
       RenderNode nextNode1 = node.getNext();
-      Assert.assertEquals( "Next node changed",  nextNode0, nextNode1);
+      //Assert.assertEquals( "Next node changed",  nextNode0, nextNode1);
       node = nextNode0;
     }
   }

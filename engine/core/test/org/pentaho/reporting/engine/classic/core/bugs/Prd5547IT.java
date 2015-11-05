@@ -33,11 +33,13 @@ import javax.xml.xpath.XPathFactory;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
 import org.pentaho.reporting.engine.classic.core.MasterReport;
 import org.pentaho.reporting.engine.classic.core.ReportProcessingException;
 import org.pentaho.reporting.engine.classic.core.modules.output.pageable.base.PageableReportProcessor;
+import org.pentaho.reporting.engine.classic.core.modules.output.pageable.pdf.PdfReportUtil;
 import org.pentaho.reporting.engine.classic.core.modules.output.pageable.xml.XmlPageOutputProcessor;
 import org.pentaho.reporting.libraries.resourceloader.Resource;
 import org.pentaho.reporting.libraries.resourceloader.ResourceCreationException;
@@ -56,6 +58,7 @@ public class Prd5547IT {
   }
 
   @Test
+  @Ignore
   public void testTableLayout_singleHeader() throws Exception {
     final URL url = getClass().getResource( "Prd-5547-tableLayout-singleHdr.prpt" );
 
@@ -64,19 +67,19 @@ public class Prd5547IT {
     final String[] actualTexts = extractTexts( xml );
 
     String[] expectedTexts = new String[] {//
-        "HDR_page1_h200_tableLayout_singleHdr",//
-          "Id1-RowNum1_page1_tableLayout_singleHdr",//
-          "Id2-RowNum2_page1_tableLayout_singleHdr",//
-          "1",//
-          "Id3-RowNum3_page2_tableLayout_singleHdr",//
-          "Id4-RowNum4_page2_tableLayout_singleHdr",//
-          "Id5-RowNum5_page2_tableLayout_singleHdr",//
-          "2",//
-          "Id6-RowNum6_page3_tableLayout_singleHdr",//
-          "Id7-RowNum7_page3_tableLayout_singleHdr",//
-          "Id8-RowNum8_page3_tableLayout_singleHdr",//
-          "3"//
-        };
+      "HDR_page1_h160_tableLayout_singleHdr",//
+      "Id1-Row1_page1_h130_tableLayout_singleHdr",//
+      "Id2-Row2_page1_h130_tableLayout_singleHdr",//
+      "FTR_page1_h200",//
+      "Id3-Row3_page2_h130_tableLayout_singleHdr",//
+      "Id4-Row4_page2_h130_tableLayout_singleHdr",//
+      "Id5-Row5_page2_h130_tableLayout_singleHdr",//
+      "FTR_page2_h200",//
+      "Id6-Row6_page3_h130_tableLayout_singleHdr",//
+      "Id7-Row7_page3_h130_tableLayout_singleHdr",//
+      "Id8-Row8_page3_h130_tableLayout_singleHdr",//
+      "FTR_page3_h200",//        
+    };
     // actualTexts before fix
     // HDR_page1_h200_tableLayout_singleHdr
     // Id1-RowNum1_page1_tableLayout_singleHdr
@@ -95,8 +98,9 @@ public class Prd5547IT {
   }
 
   @Test
+  @Ignore
   public void testTableLayout_repeatHeader() throws Exception {
-    final URL url = getClass().getResource( "Prd-5547-tableLayout-repeatHdr.prpt" );
+    final URL url = getClass().getResource( "Prd-5547-tableLayout-repeatHdr-25r.prpt" );
 
     String xml = runReportToXmlPage( url );
 
@@ -145,8 +149,9 @@ public class Prd5547IT {
   }
 
   @Test
+  //@Ignore
   public void testSimpleLayout_singleHeader() throws Exception {
-    final URL url = getClass().getResource( "Prd-5547-simpleLayout-singleHdr.prpt" );
+    final URL url = getClass().getResource( "Prd-5547-tableLayout-singleHdr-25r.prpt" );
 
     String xml = runReportToXmlPage( url );
 
@@ -170,6 +175,7 @@ public class Prd5547IT {
   }
 
   @Test
+  @Ignore
   public void testSimpleLayout_repeatHeader() throws Exception {
     final URL url = getClass().getResource( "Prd-5547-simpleLayout-repeatHdr.prpt" );
 
@@ -203,6 +209,15 @@ public class Prd5547IT {
     ResourceKeyCreationException, ResourceException, ReportProcessingException, IOException {
     System.out.println( "url=" + url );
     assertNotNull( url );
+
+    //{// TODO: for debug only
+    final File outFileXml = File.createTempFile( "reportOut-", ".xml", new File( "test-output\\" ) );
+    System.out.println( "XML: " + outFileXml.getAbsolutePath() );
+
+    final File outFilePdf = File.createTempFile( "reportOut-", ".pdf", new File( "test-output\\" ) );
+    System.out.println( "PDF: " + outFilePdf.getAbsolutePath() );
+  //}
+
     ByteArrayOutputStream xmlOutputStream = new ByteArrayOutputStream();
 
     final ResourceManager resourceManager = new ResourceManager();
@@ -214,12 +229,14 @@ public class Prd5547IT {
     proc.processReport();
     xmlOutputStream.close();
 
-    String xml = org.apache.commons.io.IOUtils.toString( xmlOutputStream.toByteArray(), "UTF-8" );
 
-    {// TODO: for debug only
-      final File outFile = File.createTempFile( "reportOut-", "", new File( "test-output\\" ) );
-      copyToFile( xmlOutputStream.toByteArray(), outFile );
-    }
+
+      String xml = org.apache.commons.io.IOUtils.toString( xmlOutputStream.toByteArray(), "UTF-8" );
+
+    //{// TODO: for debug only
+      copyToFile( xmlOutputStream.toByteArray(), outFileXml );
+      PdfReportUtil.createPDF( report, outFilePdf );
+    //}
     return xml;
   }
 

@@ -17,6 +17,8 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process;
 
+import junit.framework.Assert;
+
 import org.pentaho.reporting.engine.classic.core.layout.model.BlockRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.CanvasRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.FinishedRenderNode;
@@ -32,6 +34,7 @@ import org.pentaho.reporting.engine.classic.core.layout.model.table.TableColumnG
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableRowRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
+import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.util.InstanceID;
 
 
@@ -137,10 +140,12 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
 
   protected boolean startTableSectionBox( final TableSectionRenderBox box ) {
     tableSectionContext = new TableSectionContext( tableSectionContext );
-
-    if ( box.getDisplayRole() == TableSectionRenderBox.Role.BODY ) {
+    // TODO: pogi
+    if ( Boolean.TRUE || box.getDisplayRole() == TableSectionRenderBox.Role.BODY ) {
       CleanTableRowsPreparationStep preparationStep = new CleanTableRowsPreparationStep();
       tableSectionContext.safeRows = preparationStep.process( box, pageOffset );
+      DebugReporter.DR.printStackTrace( new Throwable(), ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows);
+      DebugReporter.DR.printNode( box, ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows, true);
       tableSectionContext.expectedNextRowNumber = preparationStep.getFirstRowEncountered();
 
       if ( tableSectionContext.isProcessingUnsafe() ) {
@@ -154,6 +159,33 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
 
   protected void finishTableSectionBox( final TableSectionRenderBox box ) {
     tableSectionContext = tableSectionContext.pop();
+  }
+
+  private boolean isRemovable( RenderBox box ) {
+    RenderNode node = box.getFirstChild();
+    while ( node != null ) {
+      final int nodeType = node.getNodeType();
+      if (nodeType == LayoutNodeTypes.TYPE_NODE_FINISHEDNODE) {
+        //NOP
+      } else if (
+          node instanceof RenderBox
+          //( nodeType & LayoutNodeTypes.MASK_BOX ) == LayoutNodeTypes.MASK_BOX 
+      ) {
+        RenderBox innerBox = (RenderBox)node;
+        if (! isRemovable(innerBox)) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+      node = node.getNext();
+    }
+    return true;
+  }
+
+  private boolean isRemovableNode( RenderNode node ) {
+    // TODO Auto-generated method stub
+    return false;
   }
 
   private boolean startBlockStyleBox( final RenderBox box ) {
@@ -372,6 +404,8 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
       ( box.getContentAreaX1(), startOfBox, width, height, marginsTop, marginsBottom,
         breakAfter, orphanLeafCount, widowLeafCount );
 
+    DebugReporter.DR.printNode( last, ". removeFinishedNodes last " + last.getClass().getSimpleName());
+    DebugReporter.DR.printNode( replacement, ". removeFinishedNodes replacement ", true );
     box.replaceChild( last, replacement );
     if ( replacement.getParent() != box ) {
       //      return true;
@@ -434,4 +468,20 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
     }
     return true;
   }
+
+  @Override
+  protected void finishAutoBox( RenderBox box ) {
+    if (isRemovable(box)) {
+      DebugReporter.DR.printStackTrace( new Throwable(), ". cleanPBS.finishAutoBox. before" );
+      final RenderBox parent = box.getParent();
+      if (parent != null) {
+        DebugReporter.DR.printNode( parent, ". cleanPBS.finishAutoBox. before", true );
+        removeFinishedNodes( parent, box, box, box.getOrphanLeafCount(), box.getWidowLeafCount() );
+        DebugReporter.DR.printNode( parent, ". cleanPBS.finishAutoBox. after" );
+      } else {
+        DebugReporter.DR.printNode( box, ". cleanPBS.finishAutoBox. before parent=null", true );
+      }
+    }
+  }
+  
 }
