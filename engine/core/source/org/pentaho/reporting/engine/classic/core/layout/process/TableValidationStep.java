@@ -12,7 +12,7 @@
 * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 * See the GNU Lesser General Public License for more details.
 *
-* Copyright (c) 2002-2013 Pentaho Corporation..  All rights reserved.
+* Copyright (c) 2002-2015 Pentaho Corporation..  All rights reserved.
 */
 
 package org.pentaho.reporting.engine.classic.core.layout.process;
@@ -59,7 +59,7 @@ public class TableValidationStep extends IterateStructuralProcessStep {
     protected int tableCellPosition;
     protected int rowIndex;
     private boolean bodySection;
-    private boolean headerOrFooterSection;
+    private boolean footerSection;
 
     public TableInfoStructure( final TableRenderBox table, final TableInfoStructure parent ) {
       this.table = table;
@@ -125,7 +125,7 @@ public class TableValidationStep extends IterateStructuralProcessStep {
       if ( this.sectionRenderBox != null ) {
         this.rowModel = sectionRenderBox.getRowModel();
         this.bodySection = ( sectionRenderBox.getDisplayRole() == TableSectionRenderBox.Role.BODY );
-        this.headerOrFooterSection = !bodySection;
+        this.footerSection = ( sectionRenderBox.getDisplayRole() == TableSectionRenderBox.Role.FOOTER );
       } else {
         this.rowModel = null;
         this.bodySection = false;
@@ -133,12 +133,12 @@ public class TableValidationStep extends IterateStructuralProcessStep {
       this.rowIndex = -1;
     }
 
-    public boolean isHeaderOrFooterSection() {
-      return headerOrFooterSection;
+    public boolean isFooterSection() {
+      return footerSection;
     }
 
-    public void setHeaderOrFooterSection( final boolean headerOrFooterSection ) {
-      this.headerOrFooterSection = headerOrFooterSection;
+    public void setFooterSection( final boolean footerSection ) {
+      this.footerSection = footerSection;
     }
 
     public boolean isBodySection() {
@@ -209,7 +209,7 @@ public class TableValidationStep extends IterateStructuralProcessStep {
   protected boolean startAutoBox( final RenderBox box ) {
     if ( currentTable != null ) {
       if ( box.getParent().getLayoutNodeType() == LayoutNodeTypes.TYPE_BOX_TABLE ) {
-        currentTable.setHeaderOrFooterSection( false );
+        currentTable.setFooterSection( false );
       }
       return true;
     }
@@ -218,7 +218,7 @@ public class TableValidationStep extends IterateStructuralProcessStep {
 
   protected void finishAutoBox( final RenderBox box ) {
     if ( currentTable != null ) {
-      box.setContainsReservedContent( currentTable.isHeaderOrFooterSection() );
+      box.setContainsReservedContent( currentTable.isFooterSection() );
     }
   }
 
