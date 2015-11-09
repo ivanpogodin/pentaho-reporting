@@ -17,7 +17,7 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process.util;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.pentaho.reporting.engine.classic.core.layout.model.LayoutNodeTypes;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderBox;

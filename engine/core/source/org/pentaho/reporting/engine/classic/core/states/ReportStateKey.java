@@ -45,7 +45,7 @@ public class ReportStateKey {
 
   public ReportStateKey() {
     i = counter++;
-    System.out.println(">>>> createEmpty");
+    //System.out.println(">>>> createEmpty");
   }
 
   public ReportStateKey( final ReportStateKey parent,
@@ -65,7 +65,8 @@ public class ReportStateKey {
     this.sequenceCounter = sequenceCounter;
     this.restoreState = restoreState;
     this.inlineSubReportState = inlineSubReportState;
-    System.out.println(">>>> create" + this);
+    
+    //System.out.println(">>>> create" + this);
   }
 
   /**

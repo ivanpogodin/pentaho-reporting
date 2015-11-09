@@ -23,6 +23,7 @@ import org.pentaho.reporting.engine.classic.core.layout.model.ParagraphRenderBox
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderNode;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.BoxShifter;
 
 
@@ -94,7 +95,11 @@ public final class FillPhysicalPagesStep extends IterateVisualProcessStep {
   public LogicalPageBox compute( final LogicalPageBox pagebox,
                                  final long pageStart,
                                  final long pageEnd ) {
-
+    {
+      final String msg = "FPPS.compute(box(offset="+pagebox.getPageOffset() +"), "+pageStart+", "+pageEnd+")";
+      DebugReporter.DR.printStackTrace( new Throwable(), msg );
+      DebugReporter.DR.printNode( pagebox, msg, true );
+    }
     getEventWatch().start();
     getSummaryWatch().start();
     try {
@@ -112,16 +117,20 @@ public final class FillPhysicalPagesStep extends IterateVisualProcessStep {
       // physical page. This would be an total overkill.
       final LogicalPageBox derived = pagebox.derive( true );
 
+      final long q = 10000L;
+      DebugReporter.DR.printNode( derived, "FPPS.compute. derived. before shiftBoxUnchecked("+((-pageStart + contentStart)/q)+")" );
       // first, shift the normal-flow content downwards.
       // The start of the logical pagebox might be in the negative range now
       // The header-size has already been taken into account by the pagination
       // step.
       BoxShifter.shiftBoxUnchecked( derived, -pageStart + contentStart );
+      DebugReporter.DR.printNode( derived, "FPPS.compute. derived. before processBoxChilds" );
 
       // now remove all the content that will not be visible at all ..
       // not processing the header and footer area: they are 'out-of-context' bands
       processBoxChilds( derived );
 
+      DebugReporter.DR.printNode( derived, "FPPS.compute. derived. before process footerArea" );
       // Then add the header at the top - it starts at (0,0) and thus it is
       // ok to leave it unshifted.
 
@@ -140,6 +149,7 @@ public final class FillPhysicalPagesStep extends IterateVisualProcessStep {
 
       derived.setPageOffset( 0 );
       derived.setPageEnd( contentEnd + footerArea.getHeight() + repeatFooterArea.getHeight() );
+      DebugReporter.DR.printNode( derived, "FPPS.compute. derived. before return" );
       return derived;
     } finally {
       getEventWatch().stop();
@@ -156,6 +166,8 @@ public final class FillPhysicalPagesStep extends IterateVisualProcessStep {
   }
 
   private boolean processBox( final RenderBox box ) {
+    DebugReporter.DR.printStackTrace( new Throwable(), "FPPS.processBox. 00" );
+    DebugReporter.DR.printNode( box, "FPPS.processBox. 00", true );
     establishPageContext( box );
 
     RenderNode node = box.getFirstChild();
@@ -176,12 +188,14 @@ public final class FillPhysicalPagesStep extends IterateVisualProcessStep {
       if ( node.getNodeType() == LayoutNodeTypes.TYPE_BOX_BREAKMARK ||
         pageContext.isFiltered( y, height ) ) {
         final RenderNode next = node.getNext();
+        DebugReporter.DR.printNode( node, "FPPS.processBox. remove node" );
         box.remove( node );
         node = next;
       } else {
         node = node.getNext();
       }
     }
+    DebugReporter.DR.printNode( box, "FPPS.processBox. 99" );
     return true;
   }
 

@@ -34,7 +34,7 @@ import org.pentaho.reporting.engine.classic.core.layout.model.table.TableColumnG
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableRowRenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
-import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.util.InstanceID;
 
 
@@ -131,7 +131,8 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
   }
 
   protected boolean startTableBox( final TableRenderBox box ) {
-    return startTableSectionStyleBox( box );
+    return true;
+    //return startTableSectionStyleBox( box ); //POGI FIX
   }
 
   protected boolean startTableCellBox( final TableCellRenderBox box ) {
@@ -142,19 +143,19 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
     tableSectionContext = new TableSectionContext( tableSectionContext );
     // TODO: pogi
     if ( box.getDisplayRole() == TableSectionRenderBox.Role.BODY ) {
-//      CleanTableRowsPreparationStep preparationStep = new CleanTableRowsPreparationStep();
-//      tableSectionContext.safeRows = preparationStep.process( box, pageOffset );
-//      DebugReporter.DR.printStackTrace( new Throwable(), ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows);
-//      DebugReporter.DR.printNode( box, ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows, true);
-//      tableSectionContext.expectedNextRowNumber = preparationStep.getFirstRowEncountered();
-//      if ( tableSectionContext.isProcessingUnsafe() ) {
-//        return false;
-//      }
+      CleanTableRowsPreparationStep preparationStep = new CleanTableRowsPreparationStep();
+      tableSectionContext.safeRows = preparationStep.process( box, pageOffset );
+      DebugReporter.DR.printStackTrace( new Throwable(), ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows);
+      DebugReporter.DR.printNode( box, ". cleanPBS.startTSB(" + pageOffset + ") " + tableSectionContext.safeRows, true);
+      tableSectionContext.expectedNextRowNumber = preparationStep.getFirstRowEncountered();
+      if ( tableSectionContext.isProcessingUnsafe() ) {
+        return false;
+      }
       return startTableSectionStyleBox( box );
     } else if ( box.getDisplayRole() == TableSectionRenderBox.Role.HEADER ) {
-      return startTableSectionStyleBox( box );
+//      return startTableSectionStyleBox( box );
     } else if ( box.getDisplayRole() == TableSectionRenderBox.Role.FOOTER ) {
-      return startTableSectionStyleBox( box );
+//      return startTableSectionStyleBox( box );
     }
     return false;
   }
@@ -226,7 +227,7 @@ public class CleanPaginatedBoxesStep extends IterateStructuralProcessStep {
 
   @Override
   protected void finishBlockBox( BlockRenderBox box ) {
-    processRemovableChildren( box );
+    //processRemovableChildren( box ); //POGI FIX
   }
 
   private void processRemovableChildren( RenderBox box ) {

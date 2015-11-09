@@ -1,4 +1,6 @@
-package org.pentaho.reporting.engine.classic.core.layout.output;
+package org.pentaho.reporting.engine.classic.core.debug;
+
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,12 +12,23 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer;
+import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderNode;
+import org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction;
 
 public class DebugReporter {
-  public static final boolean ON = false;
-  
   public static final DebugReporter DR = new DebugReporter();
+
+  public static boolean ON = true;
+  public static final Boolean ON_SetY = false;
+  public final int maxNameLength = 187;
+  public static boolean isDisplayed(int i, String msg) {
+    //return false;
+    //return i > 1300 && i < 2500;
+    return true;
+  }
+  
 
   int i = 0;
   int j = 0;
@@ -44,6 +57,7 @@ public class DebugReporter {
     FileOutputStream outS = null;
     try {
       outS = getFileOutStream( msg, currentI, ".trace.txt" );
+      if (outS==null) return;
       PrintStream out = new PrintStream( outS );
       th.printStackTrace( out );
     } catch ( FileNotFoundException e ) {
@@ -60,29 +74,36 @@ public class DebugReporter {
   }
 
   private FileOutputStream getFileOutStream( String msg, boolean currentI, String suffix  ) throws FileNotFoundException {
+    if (suffix==null) {
+      suffix = "";
+    }
     FileOutputStream outS;
     int idx;
     String fileName;
     if ( !currentI ) {
       idx = nextI();
       j = 0;
-      fileName = idxFormat.format( idx ) + "_" + msg + suffix;
+      fileName = idxFormat.format( idx ) + ".0_" + msg + suffix;
     } else {
       idx = i;
       int idx2 = nextJ();
       fileName = idxFormat.format( idx ) + "." +idx2+ "_" + msg + suffix;
     }
     
+    
     fileName = fileName.replaceAll(":", "_").replaceAll("=", "~");
     
-    final int maxNameLength = 190;
     
     if (fileName.length() > maxNameLength) {
-      fileName = fileName.substring( 0, maxNameLength );
+      fileName = fileName.substring( 0, maxNameLength-suffix.length() ) + suffix;
     }
+    if (!isDisplayed(i, msg)) {
+      System.out.println("* " + fileName);
+      return null;
+    }
+    System.out.println(fileName);
     File outFile = new File( dir, fileName );
     outS = new FileOutputStream( outFile );
-    System.out.println(fileName);
     try {
       OutputStreamWriter wr = new OutputStreamWriter( outS, "UTF-8" );
       wr.write( msg );
@@ -104,12 +125,15 @@ public class DebugReporter {
     FileOutputStream outS = null;
     try {
       outS = getFileOutStream( msg, currentI, ".node.txt" );
+      if (outS==null) return;
       PrintStream out = new PrintStream( outS );
       OutputStreamWriter wr = new OutputStreamWriter( out, "UTF-8" );
-      wr.write( pogi.PogiUtil.display( node ) );
+      wr.write( DebugUtil.display( node ) );
       wr.flush();
     } catch ( Exception e ) {
       e.printStackTrace();
+      System.out.println( "!!!!!!!!!!!!!!!!!!!!" );
+      System.exit( -1 );
     } finally {
       if ( outS != null ) {
         try {
@@ -128,6 +152,7 @@ public class DebugReporter {
     FileOutputStream outS = null;
     try {
       outS = getFileOutStream( msg, currentI, ".node.txt" );
+      if (outS==null) return;
       PrintStream out = new PrintStream( outS );
       OutputStreamWriter wr = new OutputStreamWriter( out, "UTF-8" );
       wr.write( text );
@@ -144,5 +169,10 @@ public class DebugReporter {
         }
       }
     }
+  }
+  
+  public void printTraceAndNode(Throwable th, RenderNode node, String msg) {
+    DR.printStackTrace( th, msg);
+    DR.printNode( node, msg, true);
   }
 }

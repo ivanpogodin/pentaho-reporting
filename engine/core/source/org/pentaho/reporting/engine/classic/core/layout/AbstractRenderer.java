@@ -33,7 +33,7 @@ import org.pentaho.reporting.engine.classic.core.layout.build.RenderModelBuilder
 import org.pentaho.reporting.engine.classic.core.layout.build.ReportRenderModelBuilder;
 import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.layout.output.ContentProcessingException;
-import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.output.LayoutPagebreakHandler;
 import org.pentaho.reporting.engine.classic.core.layout.output.OutputProcessor;
 import org.pentaho.reporting.engine.classic.core.layout.output.OutputProcessorFeature;
@@ -382,6 +382,7 @@ public abstract class AbstractRenderer implements Renderer {
         return LayoutResult.LAYOUT_UNVALIDATABLE;
       }
 
+      DebugReporter.DR.printStackTrace( new Throwable(), ".   validatePages. before tableValidationStep.validate" );
       // These structural processors will skip old nodes. These beasts cannot be cached otherwise.
       DebugReporter.DR.printNode( pageBox, ".   validatePages. before tableValidationStep.validate" );
       tableValidationStep.validate( pageBox ); // STRUCT

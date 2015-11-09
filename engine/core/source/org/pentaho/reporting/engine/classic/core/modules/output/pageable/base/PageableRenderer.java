@@ -17,7 +17,7 @@
 
 package org.pentaho.reporting.engine.classic.core.modules.output.pageable.base;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -164,15 +164,18 @@ public class PageableRenderer extends AbstractRenderer {
     }
 
     if ( performOutput ) {
+      DR.printStackTrace( new Throwable(), "PR.20.performPagination(., "+performOutput+")-processContent-pageBox" );
       if ( outputProcessor.isNeedAlignedPage() ) {
+        DR.printNode( pageBox, "PR.20-1.performPagination.PhysicalCompute_in" );
         final LogicalPageBox box = fillPhysicalPagesStep.compute( pageBox, pageOffset, nextOffset );
+        DR.printNode( pageBox, "PR.20-2.performPagination.beforeOutProcessContent" );
         outputProcessor.processContent( box );
         // DebugLog.log("Processing contents for Page " + pageCount + " Page-Offset: " + pageOffset + " -> " +
         // nextOffset);
       } else {
         // DebugLog.log("Processing fast contents for Page " + pageCount + " Page-Offset: " + pageOffset + " -> " +
         // nextOffset);
-        DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-processContent-pageBox" );
+        DR.printNode( pageBox, "PR.20-3.performPagination.beforeOutProcessContent" );
         outputProcessor.processContent( pageBox );
       }
     } else {
@@ -180,6 +183,7 @@ public class PageableRenderer extends AbstractRenderer {
       // useless ..
       // DebugLog.log("Recomputing contents for Page " + pageCount + " Page-Offset: " + pageOffset + " -> " +
       // nextOffset);
+      DR.printNode( pageBox, "PR.20-4.performPagination.beforeOutProcessRecomputedContent" );
       outputProcessor.processRecomputedContent( pageBox );
     }
 
@@ -191,10 +195,16 @@ public class PageableRenderer extends AbstractRenderer {
     //      Log.debug ("PageTime " + (currentPageAge - lastPageAge));
     final boolean repeat = pageBox.isOpen() || ( pageBox.getHeight() > nextOffset );
     if ( repeat ) {
-      DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-repeat" );;
+      DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-repeat (offset "+ (pageBox.getPageOffset()/100000)+" "+nextOffset+")" );
       pageBox.setPageOffset( nextOffset );
       countBoxesStep.process( pageBox );
+      DR.printNode( pageBox, "PR.performPagination(., "+performOutput+")-repeat beforeClean" );
       cleanPaginatedBoxesStep.compute( pageBox );
+      DR.printNode( pageBox, "PR.performPagination(., "+performOutput+")-repeat afterClean" );
+      //----
+      //TODO Problem: Non-printable nodes are removed incorrectly
+      //----
+      //DR.printStackTrace( new Throwable(), "PR.performPagination(., "+performOutput+")-repeat" );;
       // todo PRD-4606
       pageBox.resetCacheState( true );
 

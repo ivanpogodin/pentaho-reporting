@@ -17,7 +17,7 @@
 
 package org.pentaho.reporting.engine.classic.core.modules.output.pageable.xml;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.pentaho.reporting.engine.classic.core.InvalidReportStateException;
 import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;

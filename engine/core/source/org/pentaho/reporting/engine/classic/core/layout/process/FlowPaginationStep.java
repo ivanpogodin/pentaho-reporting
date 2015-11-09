@@ -17,7 +17,7 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.process;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,7 +30,7 @@ import org.pentaho.reporting.engine.classic.core.layout.model.ParagraphRenderBox
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderBox;
 import org.pentaho.reporting.engine.classic.core.layout.model.RenderNode;
 import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
-import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.BoxShifter;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.FlowPaginationTableState;
 import org.pentaho.reporting.engine.classic.core.layout.process.util.InitialPaginationShiftState;

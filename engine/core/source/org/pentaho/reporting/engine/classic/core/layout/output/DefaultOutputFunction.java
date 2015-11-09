@@ -17,7 +17,7 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.output;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +36,7 @@ import org.pentaho.reporting.engine.classic.core.ReportDefinition;
 import org.pentaho.reporting.engine.classic.core.ReportHeader;
 import org.pentaho.reporting.engine.classic.core.ReportProcessingException;
 import org.pentaho.reporting.engine.classic.core.Watermark;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.event.PageEventListener;
 import org.pentaho.reporting.engine.classic.core.event.ReportEvent;
 import org.pentaho.reporting.engine.classic.core.function.AbstractFunction;
@@ -45,6 +46,7 @@ import org.pentaho.reporting.engine.classic.core.function.OutputFunction;
 import org.pentaho.reporting.engine.classic.core.function.ProcessingContext;
 import org.pentaho.reporting.engine.classic.core.layout.InlineSubreportMarker;
 import org.pentaho.reporting.engine.classic.core.layout.Renderer;
+import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.layout.output.crosstab.CrosstabRowOutputHandler;
 import org.pentaho.reporting.engine.classic.core.layout.output.crosstab.RenderedCrosstabLayout;
 import org.pentaho.reporting.engine.classic.core.layout.output.crosstab.RenderedCrosstabOutputHandlerFactory;
@@ -55,8 +57,10 @@ import org.pentaho.reporting.engine.classic.core.style.BandStyleKeys;
 import org.pentaho.reporting.engine.classic.core.style.StyleSheet;
 import org.pentaho.reporting.engine.classic.core.util.InstanceID;
 import org.pentaho.reporting.libraries.base.util.FastStack;
+import org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer;
 
 import javax.swing.table.TableModel;
+
 import java.util.ArrayList;
 
 public class DefaultOutputFunction extends AbstractFunction
@@ -557,10 +561,25 @@ public class DefaultOutputFunction extends AbstractFunction
       if ( levels == null ) {
         levels = DefaultOutputFunction.collectSubReportStates( state, processingContext );
       }
-
+      {
+        LogicalPageBox node = ((AbstractRenderer)renderer).getRenderModelBuilder().getPageBox();
+        DebugReporter.DR.printNode( node, "DOF.updateHeaderArea. before updatePageHeader" );
+      }
       runtime = updatePageHeader( state, processingContext, report, levels, runtime );
+      {
+        LogicalPageBox node = ((AbstractRenderer)renderer).getRenderModelBuilder().getPageBox();
+        DebugReporter.DR.printNode( node, "DOF.updateHeaderArea. before updateRepeatingGroupHeader" );
+      }
       runtime = updateRepeatingGroupHeader( state, processingContext, report, levels, runtime );
+      {
+        LogicalPageBox node = ((AbstractRenderer)renderer).getRenderModelBuilder().getPageBox();
+        DebugReporter.DR.printNode( node, "DOF.updateHeaderArea. before updateDetailsHeader" );
+      }
       updateDetailsHeader( state, processingContext, report, runtime );
+      {
+        LogicalPageBox node = ((AbstractRenderer)renderer).getRenderModelBuilder().getPageBox();
+        DebugReporter.DR.printNode( node, "DOF.updateHeaderArea. before addSubReportMarkers" );
+      }
 
       addSubReportMarkers( renderer.endSection() );
     }

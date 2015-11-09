@@ -201,7 +201,7 @@ public abstract class IterateStructuralProcessStep {
       RenderNode nextNode0 = node.getNext();
       startProcessing( node );
       RenderNode nextNode1 = node.getNext();
-      //Assert.assertEquals( "Next node changed",  nextNode0, nextNode1);
+      Assert.assertEquals( "Next node changed",  nextNode0, nextNode1);
       node = nextNode0;
     }
   }

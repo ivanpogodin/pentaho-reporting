@@ -17,11 +17,11 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.model;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 import org.pentaho.reporting.engine.classic.core.ReportAttributeMap;
 import org.pentaho.reporting.engine.classic.core.layout.model.context.NodeLayoutProperties;
-import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
 import org.pentaho.reporting.engine.classic.core.layout.text.ExtendedBaselineInfo;
 import org.pentaho.reporting.engine.classic.core.layout.text.Glyph;
 import org.pentaho.reporting.engine.classic.core.layout.text.GlyphList;

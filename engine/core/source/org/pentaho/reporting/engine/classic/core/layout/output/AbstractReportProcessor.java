@@ -17,7 +17,11 @@
 
 package org.pentaho.reporting.engine.classic.core.layout.output;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,11 +33,16 @@ import org.pentaho.reporting.engine.classic.core.PerformanceTags;
 import org.pentaho.reporting.engine.classic.core.ReportEventException;
 import org.pentaho.reporting.engine.classic.core.ReportInterruptedException;
 import org.pentaho.reporting.engine.classic.core.ReportProcessingException;
+import org.pentaho.reporting.engine.classic.core.debug.AutocloseReader;
+import org.pentaho.reporting.engine.classic.core.debug.BSh;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.Prd5547;
 import org.pentaho.reporting.engine.classic.core.event.ReportProgressEvent;
 import org.pentaho.reporting.engine.classic.core.event.ReportProgressListener;
 import org.pentaho.reporting.engine.classic.core.function.OutputFunction;
 import org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer;
 import org.pentaho.reporting.engine.classic.core.layout.Renderer;
+import org.pentaho.reporting.engine.classic.core.layout.model.LogicalPageBox;
 import org.pentaho.reporting.engine.classic.core.states.CollectingReportErrorHandler;
 import org.pentaho.reporting.engine.classic.core.states.IgnoreEverythingReportErrorHandler;
 import org.pentaho.reporting.engine.classic.core.states.LayoutProcess;
@@ -44,7 +53,6 @@ import org.pentaho.reporting.engine.classic.core.states.ReportStateKey;
 import org.pentaho.reporting.engine.classic.core.states.process.PendingPagesHandler;
 import org.pentaho.reporting.engine.classic.core.states.process.ProcessState;
 import org.pentaho.reporting.engine.classic.core.states.process.RestartOnNewPageHandler;
-import org.pentaho.reporting.engine.classic.core.trial.Prd5547;
 import org.pentaho.reporting.engine.classic.core.util.IntList;
 import org.pentaho.reporting.libraries.base.config.Configuration;
 import org.pentaho.reporting.libraries.base.util.MemoryUsageMessage;
@@ -53,13 +61,6 @@ import org.pentaho.reporting.libraries.docbundle.DocumentBundle;
 import org.pentaho.reporting.libraries.docbundle.DocumentMetaData;
 import org.pentaho.reporting.libraries.docbundle.MemoryDocumentMetaData;
 import org.pentaho.reporting.libraries.xmlns.common.ParserUtil;
-
-import bsh.EvalError;
-
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @noinspection HardCodedStringLiteral
@@ -70,7 +71,7 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
 
   protected static final int MAX_EVENTS_PER_RUN = 200;
   protected static final int MIN_ROWS_PER_EVENT = 100;
-  protected static final int COMMIT_RATE = 0;
+  protected static final int COMMIT_RATE = 1;
 
   /**
    * A flag defining whether to check for Thread-Interrupts.
@@ -547,108 +548,208 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
     }
   }
 
+  class ProcessPaginationLevelLoopContext {
+    
+    final ProcessState startState;
+    final PageStateList pageStates;
+    final int maxRows;
+    
+    final boolean failOnError;
+    final ReportProcessingErrorHandler errorHandler;
+    final DefaultLayoutPagebreakHandler pagebreakHandler;
 
+    final ProcessState initialReportState;
+    final PageState initialPageState;
+    final ReportProgressEvent repaginationState;
+    final int eventTrigger;
+    ProcessState state;
+    final OutputProcessorMetaData metaData;
+
+    int pageEventCount;
+    ProcessState fallBackState;
+    ProcessState globalState;
+
+    ReportStateKey rollbackPageState;
+    boolean isInRollBackMode;
+
+    int eventCount;
+    int lastRow;
+    int loopI = -1;
+    public ProcessPaginationLevelLoopContext( //
+        ProcessState startState, //
+        PageStateList pageStates, //
+        int maxRows, //
+        boolean failOnError, //
+        ReportProcessingErrorHandler errorHandler, //
+        DefaultLayoutPagebreakHandler pagebreakHandler, //
+        ProcessState initialReportState, //
+        PageState initialPageState, //
+        ReportProgressEvent repaginationState, //
+        int eventTrigger, //
+        ProcessState state, //
+        OutputProcessorMetaData metaData, //
+        int pageEventCount, //
+        ProcessState fallBackState, //
+        ProcessState globalState, //
+        ReportStateKey rollbackPageState, //
+        boolean isInRollBackMode, //
+        int eventCount, //
+        int lastRow, //
+        int loopI //
+    ) {
+      super();
+      this.startState = startState;
+      this.pageStates = pageStates;
+      this.maxRows = maxRows;
+      this.failOnError = failOnError;
+      this.errorHandler = errorHandler;
+      this.pagebreakHandler = pagebreakHandler;
+      this.initialReportState = initialReportState;
+      this.initialPageState = initialPageState;
+      this.repaginationState = repaginationState;
+      this.eventTrigger = eventTrigger;
+      this.state = state;
+      this.metaData = metaData;
+      this.pageEventCount = pageEventCount;
+      this.fallBackState = fallBackState;
+      this.globalState = globalState;
+      this.rollbackPageState = rollbackPageState;
+      this.isInRollBackMode = isInRollBackMode;
+      this.eventCount = eventCount;
+      this.lastRow = lastRow;
+      this.loopI = loopI;
+    }
+    
+  }
   /**
    * Processes the print level for the current report. This function will fill the report state list while performing
    * the repagination.
    *
-   * @param startState the start state for the print level.
-   * @param pageStates the list of report states that should receive the created page states.
-   * @param maxRows    the number of rows in the report (used to estaminate the current progress).
+   * @param ___startState the start state for the print level.
+   * @param ___pageStates the list of report states that should receive the created page states.
+   * @param ___maxRows    the number of rows in the report (used to estaminate the current progress).
    * @return the finish state for the report.
    * @throws ReportProcessingException if there was a problem processing the report.
    */
-  private ProcessState processPaginationLevel( final ProcessState startState,
-                                               final PageStateList pageStates,
-                                               final int maxRows )
+  private ProcessState processPaginationLevel( final ProcessState ___startState,
+                                               final PageStateList ___pageStates,
+                                               final int ___maxRows )
     throws ReportProcessingException {
     Prd5547.inst.beginProcessPaginationLevel();
     PerformanceLoggingStopWatch sw = getPerformanceMonitorContext().createStopWatch( PerformanceTags.REPORT_PAGINATE );
     try {
       sw.start();
-      final boolean failOnError = isStrictErrorHandling( getReport().getReportConfiguration() );
-      final ReportProcessingErrorHandler errorHandler = new CollectingReportErrorHandler();
-      final DefaultLayoutPagebreakHandler pagebreakHandler = new DefaultLayoutPagebreakHandler();
+      final boolean ___failOnError = isStrictErrorHandling( getReport().getReportConfiguration() );
+      final ReportProcessingErrorHandler ___errorHandler = new CollectingReportErrorHandler();
+      final DefaultLayoutPagebreakHandler ___pagebreakHandler = new DefaultLayoutPagebreakHandler();
 
-      final ProcessState initialReportState = startState.deriveForStorage();
-      final PageState initialPageState = new PageState( initialReportState, outputProcessor.getPageCursor() );
-      pageStates.add( initialPageState );
+      final ProcessState ___initialReportState = ___startState.deriveForStorage();
+      final PageState ___initialPageState = new PageState( ___initialReportState, outputProcessor.getPageCursor() );
+      ___pageStates.add( ___initialPageState );
 
-      final ReportProgressEvent repaginationState = new ReportProgressEvent( this );
+      final ReportProgressEvent ___repaginationState = new ReportProgressEvent( this );
 
       // inner loop: process the complete report, calculate the function values
       // for the current level. Higher level functions are not available in the
       // dataRow.
-      final int eventTrigger;
-      if ( maxRows <= 0 ) {
-        eventTrigger = Math.max( maxRows / MAX_EVENTS_PER_RUN, MIN_ROWS_PER_EVENT );
+      final int ___eventTrigger;
+      if ( ___maxRows <= 0 ) {
+        ___eventTrigger = Math.max( ___maxRows / MAX_EVENTS_PER_RUN, MIN_ROWS_PER_EVENT );
       } else {
-        eventTrigger = Math.min( maxRows, Math.max( maxRows / MAX_EVENTS_PER_RUN, MIN_ROWS_PER_EVENT ) );
+        ___eventTrigger = Math.min( ___maxRows, Math.max( ___maxRows / MAX_EVENTS_PER_RUN, MIN_ROWS_PER_EVENT ) );
       }
 
-      ProcessState state = startState.deriveForStorage();
-      DR.printStackTrace( new Throwable(), "- PPL.00 state = startState.deriveForStorage();" + state);
-      state.setErrorHandler( errorHandler );
-      validate( state );
+      ProcessState ___state = ___startState.deriveForStorage();
+      DR.printStackTrace( new Throwable(), "- PPL.00 state = startState.deriveForStorage();" + ___state);
+      ___state.setErrorHandler( ___errorHandler );
+      validate( ___state );
 
-      final OutputProcessorMetaData metaData =
-        state.getFlowController().getReportContext().getOutputProcessorMetaData();
-      pagebreaksSupported = metaData.isFeatureSupported( OutputProcessorFeature.PAGEBREAKS );
+      final OutputProcessorMetaData ___metaData =
+        ___state.getFlowController().getReportContext().getOutputProcessorMetaData();
+      pagebreaksSupported = ___metaData.isFeatureSupported( OutputProcessorFeature.PAGEBREAKS );
 
-      int pageEventCount = 0;
+      int ___pageEventCount = 0;
       // First and last derive of a page must be a storage derivate - this clones everything and does
       // not rely on the more complicated transactional layouting ..
-      ProcessState fallBackState = pagebreaksSupported ? state.deriveForPagebreak() : null;
-      ProcessState globalState = pagebreaksSupported ? state.deriveForStorage() : null;
+      ProcessState ___fallBackState = pagebreaksSupported ? ___state.deriveForPagebreak() : null;
+      ProcessState ___globalState = pagebreaksSupported ? ___state.deriveForStorage() : null;
 
-      ReportStateKey rollbackPageState = null;
-      boolean isInRollBackMode = false;
+      ReportStateKey ___rollbackPageState = null;
+      boolean ___isInRollBackMode = false;
 
-      int eventCount = 0;
-      int lastRow = -1;
-      int loopI = 0;
-      while ( !state.isFinish() ) {
-        DR.printStackTrace( new Throwable(), "- PPL.05 LOOP(" + ( loopI++) + "); " + state);
+      int ___eventCount = 0;
+      int ___lastRow = -1;
+      int ___loopI = 0;
+      ProcessPaginationLevelLoopContext ctx = new ProcessPaginationLevelLoopContext(
+          ___startState, //
+          ___pageStates, //
+          ___maxRows, //
+          ___failOnError, //
+          ___errorHandler, //
+          ___pagebreakHandler, //
+          ___initialReportState, //
+          ___initialPageState, //
+          ___repaginationState, //
+          ___eventTrigger, //
+          ___state, //
+          ___metaData, //
+          ___pageEventCount, //
+          ___fallBackState, //
+          ___globalState, //
+          ___rollbackPageState, //
+          ___isInRollBackMode, //
+          ___eventCount, //
+          ___lastRow, //
+          ___loopI //
+          );
+      while ( !ctx.state.isFinish() ) {
+        {
+          ctx.loopI++;
+        }
+        DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+            "- PPL.05 loop=" + ( ctx.loopI ) + //
+                " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + " begin; " + ctx.state );
         int logPageCount = outputProcessor.getLogicalPageCount();
         int physPageCount = outputProcessor.getPhysicalPageCount();
 
         checkInterrupted();
-        if ( lastRow != state.getCurrentRow() ) {
-          lastRow = state.getCurrentRow();
-          if ( eventCount == 0 ) {
-            if ( isPagebreaksSupported() && fallBackState != null ) {
-              repaginationState
-                .reuse( ReportProgressEvent.PAGINATING, fallBackState, calculatePageCount( fallBackState ) );
+        if ( ctx.lastRow != ctx.state.getCurrentRow() ) {
+          ctx.lastRow = ctx.state.getCurrentRow();
+          if ( ctx.eventCount == 0 ) {
+            if ( isPagebreaksSupported() && ctx.fallBackState != null ) {
+              ctx.repaginationState
+                .reuse( ReportProgressEvent.PAGINATING, ctx.fallBackState, calculatePageCount( ctx.fallBackState ) );
             } else {
-              repaginationState.reuse( ReportProgressEvent.PAGINATING, state, calculatePageCount( state ) );
+              ctx.repaginationState.reuse( ReportProgressEvent.PAGINATING, ctx.state, calculatePageCount( ctx.state ) );
             }
-            fireStateUpdate( repaginationState );
-            eventCount += 1;
+            fireStateUpdate( ctx.repaginationState );
+            ctx.eventCount += 1;
           } else {
-            if ( eventCount == eventTrigger ) {
-              eventCount = 0;
+            if ( ctx.eventCount == ctx.eventTrigger ) {
+              ctx.eventCount = 0;
             } else {
-              eventCount += 1;
+              ctx.eventCount += 1;
             }
           }
         }
 
         // Do not try to layout on a artificial state. Those states are not valid on
         // generating page events and cannot be trusted.
-        ProcessState realFallbackState = fallBackState;
+        ProcessState realFallbackState = ctx.fallBackState;
         final ProcessState restoreState;
-        if ( pagebreaksSupported && state.isArtifcialState() == false ) {
-          restoreState = fallBackState;
-          if ( isInRollBackMode == false ) {
-            if ( pageEventCount >= AbstractReportProcessor.COMMIT_RATE ) {
-              final OutputFunction outputFunction = state.getLayoutProcess().getOutputFunction();
+        if ( pagebreaksSupported && ctx.state.isArtifcialState() == false ) {
+          restoreState = ctx.fallBackState;
+          if ( ctx.isInRollBackMode == false ) {
+            if ( ctx.pageEventCount >= AbstractReportProcessor.COMMIT_RATE ) {
+              final OutputFunction outputFunction = ctx.state.getLayoutProcess().getOutputFunction();
               if ( outputFunction.createRollbackInformation() ) {
-                realFallbackState = state.deriveForPagebreak();
+                realFallbackState = ctx.state.deriveForPagebreak();
                 if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-                  logger.debug( "Paginate: Try to generate new fallback state after commit count reached: " + state
+                  logger.debug( "Paginate: Try to generate new fallback state after commit count reached: " + ctx.state
                     .getProcessKey() );
                 }
-                validate( state );
+                validate( ctx.state );
               } else {
                 realFallbackState = null;
               }
@@ -658,43 +759,50 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
           restoreState = null;
         }
 
-        final ProcessState nextState = state.advance();
-        state.setErrorHandler( IgnoreEverythingReportErrorHandler.INSTANCE );
-        state = nextState;
-        DR.printStackTrace( new Throwable(), "- PPL.10 state = nextState; " + state);
-        validate( state );
+        final ProcessState nextState = ctx.state.advance();
+        ctx.state.setErrorHandler( IgnoreEverythingReportErrorHandler.INSTANCE );
+        ctx.state = nextState;
+        DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+            "- PPL.10 loop=" + ( ctx.loopI ) + //
+                " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); afterAdvance " + ctx.state );
+        validate( ctx.state );
 
-        final ReportStateKey nextStateKey = state.getProcessKey();
+        final ReportStateKey nextStateKey = ctx.state.getProcessKey();
 
-        if ( errorHandler.isErrorOccured() == true ) {
-          final List childExceptions = Arrays.asList( errorHandler.getErrors() );
-          errorHandler.clearErrors();
+        if ( ctx.errorHandler.isErrorOccured() == true ) {
+          final List childExceptions = Arrays.asList( ctx.errorHandler.getErrors() );
+          ctx.errorHandler.clearErrors();
           final ReportEventException exception =
             new ReportEventException( "Failed to dispatch an event.", childExceptions );
-          if ( failOnError ) {
+          if ( ctx.failOnError ) {
             throw exception;
           } else {
             AbstractReportProcessor.logger.error( "Failed to dispatch an event.", exception );
           }
         }
 
-        if ( state.isArtifcialState() ) {
+        if ( ctx.state.isArtifcialState() ) {
           if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-            logger.debug( "Paginate: Silent commit as we are in an artificial state: " + state.getProcessKey() );
+            logger.debug( "Paginate: Silent commit as we are in an artificial state: " + ctx.state.getProcessKey() );
           }
-          state = state.commit();
-          DR.printStackTrace( new Throwable(), "- PPL.20 state = state.commit(); " + state);
+          ctx.state = ctx.state.commit();
+          DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+              "- PPL.10 loop=" + ( ctx.loopI ) + //
+                  " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                  " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); afterStateCommit " + ctx.state );
           if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-            logger.debug( "Paginate: Post Silent commit as we are in an artificial state: " + state.getProcessKey() );
+            logger.debug( "Paginate: Post Silent commit as we are in an artificial state: " + ctx.state.getProcessKey() );
           }
           continue;
         }
 
-        final OutputFunction outputFunction = state.getLayoutProcess().getOutputFunction();
+        final OutputFunction outputFunction = ctx.state.getLayoutProcess().getOutputFunction();
         if ( outputFunction instanceof DefaultOutputFunction == false ) {
-          state = state.commit();
-          DR.printStackTrace( new Throwable(), "- PPL.30 state = state.commit(); " + state);
-          if ( state.isFinish() && pageStates.size() == 1 ) {
+          ctx.state = ctx.state.commit();
+          DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+              "- PPL.30 state = state.commit(); " + ctx.state );
+          if ( ctx.state.isFinish() && ctx.pageStates.size() == 1 ) {
             physicalMapping.add( 0 );
             logicalMapping.add( 0 );
           }
@@ -703,30 +811,46 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
 
         final DefaultOutputFunction lm = (DefaultOutputFunction) outputFunction;
         final Renderer renderer = lm.getRenderer();
-        renderer.setStateKey( state.getProcessKey() );
-        pagebreakHandler.setReportState( state );
+        renderer.setStateKey( ctx.state.getProcessKey() );
+        ctx.pagebreakHandler.setReportState( ctx.state );
 
         boolean assertExpectPagebreak = false;
-        if ( isInRollBackMode ) {
-          if ( nextStateKey.equals( rollbackPageState ) ) {
+        if ( ctx.isInRollBackMode ) {
+          if ( nextStateKey.equals( ctx.rollbackPageState ) ) {
             // reached the border case. We have to insert a manual pagebreak here or at least
             // we have to force the renderer to end the page right now.
             if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
               AbstractReportProcessor.logger.debug(
                 "Paginate: Found real pagebreak position. This might be the last state we process: "
-                  + rollbackPageState );
+                  + ctx.rollbackPageState );
               AbstractReportProcessor.logger.debug(
-                "Paginate:   (Current state process key)           : " + state.getProcessKey() );
+                "Paginate:   (Current state process key)           : " + ctx.state.getProcessKey() );
               AbstractReportProcessor.logger.debug(
-                "Paginate:   (Handler)                             : " + state.getAdvanceHandler().getClass()
+                "Paginate:   (Handler)                             : " + ctx.state.getAdvanceHandler().getClass()
                   .getName() );
             }
             assertExpectPagebreak = true;
+            DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                "- PPL.35. loop=" + ( ctx.loopI ) + //
+                    " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                    " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); beforePB " + ctx.state );
             renderer.addPagebreak();
+            DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                "- PPL.36. loop=" + ( ctx.loopI ) + //
+                    " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                    " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); afterPB" + ctx.state );
           }
         }
 
+        DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+            "- PPL.37. loop=" + ( ctx.loopI ) + //
+                " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); beforeV " + ctx.state );
         final Renderer.LayoutResult pagebreakEncountered = renderer.validatePages();
+        DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+            "- PPL.37. loop=" + ( ctx.loopI ) + //
+                " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); afterV " + ctx.state );
         if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
           AbstractReportProcessor.logger.debug( "Paginate: Validate Page returned " + pagebreakEncountered );
           if ( assertExpectPagebreak == true && pagebreakEncountered != Renderer.LayoutResult.LAYOUT_PAGEBREAK ) {
@@ -735,29 +859,29 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
         }
 
         if ( pagebreakEncountered != Renderer.LayoutResult.LAYOUT_UNVALIDATABLE ) {//!!!!!!!!!!!!!!!
-          if ( pagebreaksSupported && state.isArtifcialState() == false ) {
-            if ( isInRollBackMode == false ) {
-              if ( pageEventCount >= AbstractReportProcessor.COMMIT_RATE ) {
+          if ( pagebreaksSupported && ctx.state.isArtifcialState() == false ) {
+            if ( ctx.isInRollBackMode == false ) {
+              if ( ctx.pageEventCount >= AbstractReportProcessor.COMMIT_RATE ) {
                 if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                   logger.debug(
-                    "Paginate: Try to apply new fallback state after commit count reached: " + state.getProcessKey() );
+                    "Paginate: Try to apply new fallback state after commit count reached: " + ctx.state.getProcessKey() );
                   logger.debug( "Paginate:        : " + renderer.getLastStateKey() );
                 }
 
-                fallBackState = realFallbackState;
-                pageEventCount = 0;
+                ctx.fallBackState = realFallbackState;
+                ctx.pageEventCount = 0;
               } else {
                 if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-                  logger.debug( "Paginate: Increase counter: " + state.getProcessKey() );
+                  logger.debug( "Paginate: Increase counter: " + ctx.state.getProcessKey() );
                 }
-                pageEventCount += 1;
+                ctx.pageEventCount += 1;
               }
             }
           }
         } else if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-          if ( pagebreaksSupported && state.isArtifcialState() == false ) {
-            if ( isInRollBackMode == false ) {
-              logger.debug( "Paginate: SKIP : " + state.getProcessKey() );
+          if ( pagebreaksSupported && ctx.state.isArtifcialState() == false ) {
+            if ( ctx.isInRollBackMode == false ) {
+              logger.debug( "Paginate: SKIP : " + ctx.state.getProcessKey() );
             }
           }
         }
@@ -768,22 +892,22 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
           //          renderer.print();
           final ReportStateKey lastVisibleStateKey = renderer.getLastStateKey();
           if ( isPagebreaksSupported() &&
-            isInRollBackMode == false &&
+            ctx.isInRollBackMode == false &&
             lastVisibleStateKey != null &&
             renderer.isOpen() ) {
             if ( lastVisibleStateKey.equals( nextStateKey ) == false &&
-              lastVisibleStateKey.getSequenceCounter() > globalState.getProcessKey().getSequenceCounter() ) {
+              lastVisibleStateKey.getSequenceCounter() > ctx.globalState.getProcessKey().getSequenceCounter() ) {
               // Roll back to the last known to be good position and process the states up to, but not
               // including the current state. This way, we can fire the page-events *before* this band
               // gets printed.
-              rollbackPageState = lastVisibleStateKey;
+              ctx.rollbackPageState = lastVisibleStateKey;
 
               final ReportStateKey restoreStateProcessKey = restoreState.getProcessKey();
               if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                 AbstractReportProcessor.logger.debug(
-                  "Paginate: Encountered bad break, need to roll-back: " + rollbackPageState );
+                  "Paginate: Encountered bad break, need to roll-back: " + ctx.rollbackPageState );
                 AbstractReportProcessor.logger.debug(
-                  "Paginate:    Next StateKey                        : " + state.getProcessKey() );
+                  "Paginate:    Next StateKey                        : " + ctx.state.getProcessKey() );
                 AbstractReportProcessor.logger.debug(
                   "Paginate:    Restored Key                         : " + restoreStateProcessKey );
                 AbstractReportProcessor.logger.debug(
@@ -792,32 +916,39 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
               if ( lastVisibleStateKey.getSequenceCounter() < restoreStateProcessKey.getSequenceCounter() ) {
                 if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                   AbstractReportProcessor.logger.debug(
-                    "Paginate: Fall back to start of page              : " + globalState.getProcessKey() );
+                    "Paginate: Fall back to start of page              : " + ctx.globalState.getProcessKey() );
                 }
-                if ( lastVisibleStateKey.getSequenceCounter() <= globalState.getProcessKey().getSequenceCounter() ) {
+                if ( lastVisibleStateKey.getSequenceCounter() <= ctx.globalState.getProcessKey().getSequenceCounter() ) {
                   throw new ReportProcessingException(
                     "Paginate: Error, fallback position is after last visible state." );
                 }
-                state = globalState.deriveForStorage();
-                DR.printStackTrace( new Throwable(), "- PPL.40 state = globalState.deriveForStorage(); " + state);
+                ctx.state = ctx.globalState.deriveForStorage();
+                DR.printStackTrace( new Throwable(), "- PPL.40 state = globalState.deriveForStorage(); " + ctx.state);
               } else {
                 if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                   AbstractReportProcessor.logger.debug(
                     "Paginate: Fall back to save-state                 : " + restoreStateProcessKey );
                 }
-                state = restoreState.deriveForPagebreak();
-                DR.printStackTrace( new Throwable(), "- PPL.50 state = restoreState.deriveForPagebreak(); " + state);
+                ctx.state = restoreState.deriveForPagebreak();
+                DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                    "- PPL.50. loop=" + ( ctx.loopI ) + //
+                        " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                        " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); derive " + ctx.state );
               }
 
               final DefaultOutputFunction rollbackOutputFunction =
-                (DefaultOutputFunction) state.getLayoutProcess().getOutputFunction();
+                (DefaultOutputFunction) ctx.state.getLayoutProcess().getOutputFunction();
               final Renderer rollbackRenderer = rollbackOutputFunction.getRenderer();
               rollbackRenderer.rollback();
 
-              validate( state );
+              validate( ctx.state );
 
-              isInRollBackMode = true;
-              fallBackState = null; // there is no way we can fall-back inside a roll-back ..
+              ctx.isInRollBackMode = true;
+              ctx.fallBackState = null; // there is no way we can fall-back inside a roll-back ..
+              DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                  "- PPL.52. loop=" + ( ctx.loopI ) + //
+                      " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                      " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); resetRB.pBreak " + ctx.state );
               continue;
             }
 
@@ -831,26 +962,30 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
             }
 
             onGoingPageBreak = true;
-            rollbackPageState = null;
+            ctx.rollbackPageState = null;
           } else {
             if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-              if ( isInRollBackMode ) {
-                AbstractReportProcessor.logger.debug( "Paginate: Encountered a roll-back break: " + isInRollBackMode );
+              if ( ctx.isInRollBackMode ) {
+                AbstractReportProcessor.logger.debug( "Paginate: Encountered a roll-back break: " + ctx.isInRollBackMode );
                 if ( assertExpectPagebreak == false ) {
                   AbstractReportProcessor.logger.debug( "Paginate: next state:     " + nextStateKey );
-                  if ( nextStateKey.equals( rollbackPageState ) == false ) {
-                    AbstractReportProcessor.logger.debug( "Paginate: rollback state: " + rollbackPageState );
+                  if ( nextStateKey.equals( ctx.rollbackPageState ) == false ) {
+                    AbstractReportProcessor.logger.debug( "Paginate: rollback state: " + ctx.rollbackPageState );
                   }
                 }
               } else {
-                AbstractReportProcessor.logger.debug( "Paginate: Encountered a good break: " + isInRollBackMode );
+                AbstractReportProcessor.logger.debug( "Paginate: Encountered a good break: " + ctx.isInRollBackMode );
               }
               AbstractReportProcessor.logger.debug
-                ( "Paginate:                                              : " + state.getProcessKey() );
+                ( "Paginate:                                              : " + ctx.state.getProcessKey() );
             }
-            isInRollBackMode = false;
-            rollbackPageState = null;
+            ctx.isInRollBackMode = false;
+            ctx.rollbackPageState = null;
             onGoingPageBreak = false;
+            DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                "- PPL.52. loop=" + ( ctx.loopI ) + //
+                    " sc=" + ctx.state.getProcessKey().getSequenceCounter() + //
+                    " rb=" + ( ctx.isInRollBackMode ? "T" : "_" ) + "); resetRB.noPBreak " + ctx.state );
           }
 
           if ( isPagebreaksSupported() == false ) {
@@ -860,7 +995,7 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
             renderer.applyAutoCommit();
           }
 
-          if ( renderer.processPage( pagebreakHandler, state.getProcessKey(), true ) == false ) {
+          if ( renderer.processPage( ctx.pagebreakHandler, ctx.state.getProcessKey(), true ) == false ) {
             throw new IllegalStateException
               ( "This cannot be. If the validation said we get a new page, how can we now get lost here" );
           }
@@ -870,35 +1005,35 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
               && renderer.isPageStartPending() == false ) {
               if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                 logger.debug(
-                  "Paginate: Delaying next event to allow pending pages to be processed: " + state.getProcessKey() );
+                  "Paginate: Delaying next event to allow pending pages to be processed: " + ctx.state.getProcessKey() );
               }
-              state = PendingPagesHandler.create( state );
-              DR.printStackTrace( new Throwable(), "- PPL.60 state = PendingPagesHandler.create(state); " + state);
+              ctx.state = PendingPagesHandler.create( ctx.state );
+              DR.printStackTrace( new Throwable(), "- PPL.60 state = PendingPagesHandler.create(state); " + ctx.state);
             } else {
               if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
                 logger
-                  .debug( "Paginate: Adding RestartOnNewPageHandler to open Page in time: " + state.getProcessKey() );
+                  .debug( "Paginate: Adding RestartOnNewPageHandler to open Page in time: " + ctx.state.getProcessKey() );
               }
-              state = RestartOnNewPageHandler.create( state.commit() );
-              DR.printStackTrace( new Throwable(), "- PPL.70 state = RestartOnNewPageHandler.create(state.commit()); " + state);
+              ctx.state = RestartOnNewPageHandler.create( ctx.state.commit() );
+              DR.printStackTrace( new Throwable(), "- PPL.70 state = RestartOnNewPageHandler.create(state.commit()); " + ctx.state);
             }
           } else {
             if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
               logger.debug(
-                "Paginate: Commit on page-break: " + state.getProcessKey() + " " + state.getAdvanceHandler().getClass()
+                "Paginate: Commit on page-break: " + ctx.state.getProcessKey() + " " + ctx.state.getAdvanceHandler().getClass()
                   .getName() );
             }
-            state = state.commit();
-            DR.printStackTrace( new Throwable(), "- PPL.80 state = state.commit(); " + state);
+            ctx.state = ctx.state.commit();
+            DR.printStackTrace( new Throwable(), "- PPL.80 state = state.commit(); " + ctx.state);
           }
 
           if ( onGoingPageBreak ) {
-            renderer.setStateKey( state.getProcessKey() );
+            renderer.setStateKey( ctx.state.getProcessKey() );
             renderer.addProgressBox();
           }
 
           if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-            logger.debug( "Paginate: Post Commit: " + state.getProcessKey() + " " + state.getAdvanceHandler().getClass()
+            logger.debug( "Paginate: Post Commit: " + ctx.state.getProcessKey() + " " + ctx.state.getAdvanceHandler().getClass()
               .getName() );
           }
 
@@ -906,7 +1041,7 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
           final int newLogPageCount = outputProcessor.getLogicalPageCount();
           final int newPhysPageCount = outputProcessor.getPhysicalPageCount();
 
-          final int result = pageStates.size() - 1;
+          final int result = ctx.pageStates.size() - 1;
           for (; physPageCount < newPhysPageCount; physPageCount++ ) {
             physicalMapping.add( result );
           }
@@ -915,77 +1050,91 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
             logicalMapping.add( result );
           }
 
-          if ( state.isFinish() == false ) {
+          if ( ctx.state.isFinish() == false ) {
             // A pagebreak has occured ...
             // We add all but the last state ..
-            final PageState pageState = new PageState( state, outputProcessor.getPageCursor() );
-            pageStates.add( pageState );
+            final PageState pageState = new PageState( ctx.state, outputProcessor.getPageCursor() );
+            ctx.pageStates.add( pageState );
           }
 
           if ( isPagebreaksSupported() ) {
-            fallBackState = state.deriveForPagebreak();
-            globalState = state.deriveForStorage();
+            ctx.fallBackState = ctx.state.deriveForPagebreak();
+            ctx.globalState = ctx.state.deriveForStorage();
             if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-              logger.debug( "Paginate: Generating new fallback state after pagebreak found: " + state.getProcessKey() );
+              logger.debug( "Paginate: Generating new fallback state after pagebreak found: " + ctx.state.getProcessKey() );
             }
-            pageEventCount = 0;
-            eventCount = 0;
+            ctx.pageEventCount = 0;
+            ctx.eventCount = 0;
           }
         } else {
-          if ( isPagebreaksSupported() == false ) {
+          if ( isPagebreaksSupported() == false ) {//TODO this "if" is useless
             renderer.applyAutoCommit();
           }
 
           // PageEventCount is zero on streaming exports and zero after a new rollback event is created.
-          if ( pageEventCount == 0 && isInRollBackMode == false &&
+          if ( ctx.pageEventCount == 0 && ctx.isInRollBackMode == false &&
             pagebreakEncountered == Renderer.LayoutResult.LAYOUT_NO_PAGEBREAK ) {
             if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-              logger.debug( "Paginate: Perform incremental update: " + state.getProcessKey() );
+              logger.debug( "Paginate: Perform incremental update: " + ctx.state.getProcessKey() );
             }
             renderer.processIncrementalUpdate( false );
             //fallBackState = state;
           }
           if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
             logger.debug(
-              "Paginate: Commit: " + state.getProcessKey() + " " + state.getAdvanceHandler().getClass().getName() );
+              "Paginate: Commit: " + ctx.state.getProcessKey() + " " + ctx.state.getAdvanceHandler().getClass().getName() );
           }
-          state = state.commit();
-          DR.printStackTrace( new Throwable(), "- PPL.90 state = state.commit(); " + state);
+          ctx.state = ctx.state.commit();
+          DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+              "- PPL.90. loop=" + ( ctx.loopI) + // 
+                " sc=" + ctx.state.getProcessKey().getSequenceCounter()+//
+                " rb="+ (ctx.isInRollBackMode?"T":"_")+ "); afterStateCommit " + ctx.state);
           //fallBackState = state.deriveForPagebreak();
           if ( AbstractReportProcessor.SHOW_ROLLBACKS ) {
-            logger.debug( "Paginate: Post Commit: " + state.getProcessKey() + " " + state.getAdvanceHandler().getClass()
+            logger.debug( "Paginate: Post Commit: " + ctx.state.getProcessKey() + " " + ctx.state.getAdvanceHandler().getClass()
               .getName() );
           }
 
           //          printLayoutStateToFile(state, false, isInRollBackMode);
 
-          if ( pagebreaksSupported && fallBackState != restoreState ) {
+          if ( pagebreaksSupported && ctx.fallBackState != restoreState ) {
             final DefaultOutputFunction commitableOutputFunction =
-              (DefaultOutputFunction) state.getLayoutProcess().getOutputFunction();
+              (DefaultOutputFunction) ctx.state.getLayoutProcess().getOutputFunction();
             final Renderer commitableRenderer = commitableOutputFunction.getRenderer();
             commitableRenderer.applyRollbackInformation();
             //fallBackState = state.deriveForPagebreak();
-            DR.printStackTrace( new Throwable(), "- PPL.95 fbstate = state.commit(); " + fallBackState);
+            DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+                "- PPL.95. loop=" + ( ctx.loopI) + // 
+                  " sc=" + ctx.state.getProcessKey().getSequenceCounter()+//
+                  " rb="+ (ctx.isInRollBackMode?"T":"_")+ "); afterApplyRBI " + ctx.state);
           }
         }
 
       }
       
       //try {
-      //  pogi.BSh.create().set("filter", true).set( "node",  //
+      //  BSh.create().set("filter", true).set( "node",  //
       //      (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) //
-      //  ).getInterpreter().eval( new pogi.AutocloseReader( new java.io.FileReader( "D:\\PENT\\work\\PRD-5547\\display-node.bsh" ) ) );
+      //  ).getInterpreter().eval( new AutocloseReader( new java.io.FileReader( "D:\\PENT\\work\\PRD-5547\\display-node.bsh" ) ) );
       //} catch ( Exception e ) {
       //  e.printStackTrace();
       //}
       /*state-node*/
-      return initialReportState;
+      DR.printTraceAndNode( new Throwable(), getStatePageBox( ctx ), //
+          "- PPL.99 processPaginationLevel result "+ // 
+            " sc=" + ctx.state.getProcessKey().getSequenceCounter()+//
+            " rb="+ (ctx.isInRollBackMode?"T":"_")+ "); " + ctx.state);
+      return ctx.initialReportState;
     } catch ( ContentProcessingException e ) {
       throw new ReportProcessingException( "Content-Processing failed.", e );
     } finally {
       Prd5547.inst.endProcessPaginationLevel();
       sw.close();
     }
+  }
+
+  private LogicalPageBox getStatePageBox( ProcessPaginationLevelLoopContext ctx ) {
+    return ((AbstractRenderer)((DefaultOutputFunction)ctx.state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox();
   }
 
   @SuppressWarnings( "UnusedDeclaration" )
@@ -1114,7 +1263,7 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
         iterI++;
         DR.printStackTrace(new Throwable(), "---iterI " + iterI + " " + state);
         try {
-          DR.printText( (String)pogi.BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new pogi.AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
+          DR.printText( (String)BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
               , "---iterI " + iterI + " node", true );
         } catch ( Exception e ) {
           e.printStackTrace();
@@ -1220,14 +1369,14 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
         }
 
         try {
-          DR.printText( (String)pogi.BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new pogi.AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
+          DR.printText( (String)BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
               , "  ---iterI " + iterI + " node.before validatePages" );
         } catch ( Exception e ) {
           e.printStackTrace();
         }
         final Renderer.LayoutResult pagebreakEncountered = renderer.validatePages();
         try {
-          DR.printText( (String)pogi.BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new pogi.AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
+          DR.printText( (String)BSh.create().set("filter", true).set( "node", (((org.pentaho.reporting.engine.classic.core.layout.AbstractRenderer)((org.pentaho.reporting.engine.classic.core.layout.output.DefaultOutputFunction)state.getLayoutProcess().getOutputFunction()).getRenderer()).getRenderModelBuilder().getPageBox()) ).getInterpreter().eval( new AutocloseReader( new java.io.FileReader( "D:\\\\PENT\\\\work\\\\PRD-5547\\\\display-node.bsh" ) ) )/*state-node*/
               , "  ---iterI " + iterI + " node.after validatePages" );
         } catch ( Exception e ) {
           e.printStackTrace();
@@ -1489,6 +1638,8 @@ public abstract class AbstractReportProcessor implements ReportProcessor {
           // Processes the whole report ..
           prepareReportProcessing();
         }
+        
+        DebugReporter.DR.ON = false; // stop trace 
         PerformanceLoggingStopWatch sw =
           getPerformanceMonitorContext().createStopWatch( PerformanceTags.REPORT_GENERATE );
         try {

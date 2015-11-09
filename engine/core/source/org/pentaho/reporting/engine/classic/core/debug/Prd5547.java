@@ -1,6 +1,6 @@
-package org.pentaho.reporting.engine.classic.core.trial;
+package org.pentaho.reporting.engine.classic.core.debug;
 
-import static org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter.DR;
+import static org.pentaho.reporting.engine.classic.core.debug.DebugReporter.DR;
 
 public class Prd5547 {
   public static final Prd5547 inst = new Prd5547();

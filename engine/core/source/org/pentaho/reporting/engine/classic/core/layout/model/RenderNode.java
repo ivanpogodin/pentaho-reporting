@@ -23,7 +23,10 @@ import java.util.regex.Pattern;
 import org.pentaho.reporting.engine.classic.core.ClassicEngineBoot;
 import org.pentaho.reporting.engine.classic.core.ReportAttributeMap;
 import org.pentaho.reporting.engine.classic.core.layout.model.context.NodeLayoutProperties;
-import org.pentaho.reporting.engine.classic.core.layout.output.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox;
+import org.pentaho.reporting.engine.classic.core.layout.model.table.TableSectionRenderBox.Role;
+import org.pentaho.reporting.engine.classic.core.debug.DebugReporter;
+import org.pentaho.reporting.engine.classic.core.debug.DebugUtil;
 import org.pentaho.reporting.engine.classic.core.metadata.ElementType;
 import org.pentaho.reporting.engine.classic.core.states.ReportStateKey;
 import org.pentaho.reporting.engine.classic.core.style.ElementStyleKeys;
@@ -212,11 +215,13 @@ public abstract class RenderNode implements Cloneable {
 
   public void setY( final long y ) {
     if (y != 0) {
-      String display = pogi.PogiUtil.display( this );
+      String display = DebugUtil.display( this );
       //if ( display.contains( "HDR_page" ) ) 
-      {
+      if (DebugReporter.DR.ON_SetY){
         final String info = extractNodeInfo( display );
-        final String msg = this.getClass().getSimpleName() + ".      setY (" + this.y + ")(" + y + ")"+info;
+        final String role= (this instanceof TableSectionRenderBox)?String.valueOf( ((TableSectionRenderBox)this).getDisplayRole() ) + " ": "";
+        final long q = 10000L;
+        final String msg = this.getClass().getSimpleName() + ".      setY (" + (this.y/q) + ")(" + (y/q) + ")(d="+((y-this.y)/q)+")"+role + info;
         DebugReporter.DR.printText( display, msg );
         DebugReporter.DR.printStackTrace( new Throwable(),  msg, true );
       }
@@ -638,11 +643,12 @@ public abstract class RenderNode implements Cloneable {
    */
   public void setCachedY( final long cachedY ) {
     if (cachedY != 0) {
-      String display = pogi.PogiUtil.display( this );
+      String display = DebugUtil.display( this );
       //if ( display.contains( "HDR_page" ) ) 
-      {
+      if (DebugReporter.DR.ON_SetY){
         final String info = extractNodeInfo( display );
-        final String msg = this.getClass().getSimpleName() + ".      setCachedY (" + this.cachedY + ")(" + cachedY + ")"+ info;
+        final long q = 10000L;
+        final String msg = this.getClass().getSimpleName() + ".      setCachedY (" + (this.cachedY/q) + ")(" + (cachedY/q) + ")(d="+((cachedY-this.cachedY)/q)+")"+ info;
         DebugReporter.DR.printText( display, msg );
         DebugReporter.DR.printStackTrace( new Throwable(),  msg, true );
       }
@@ -833,6 +839,11 @@ public abstract class RenderNode implements Cloneable {
   }
 
   protected void setFlag( final int flag, final boolean value ) {
+    if ((flag & org.pentaho.reporting.engine.classic.core.layout.model.RenderBox.FLAG_BOX_CONTAINS_PRESERVED_CONTENT) != 0) {
+      final String msg = "RenderBox("+this.getClass().getSimpleName()+").set FLAG_BOX_CONTAINS_PRESERVED_CONTENT " + value;
+      DebugReporter.DR.printStackTrace( new Throwable(), msg );
+      DebugReporter.DR.printNode( this, msg );
+    }
     if ( value ) {
       flags = flags | flag;
     } else {
